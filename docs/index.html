@@ -91,10 +91,10 @@
         userInput.value = "";
 
         accuracyElement.textContent = "0%";
-        timerElement.textContent = "60";
+        timerElement.textContent = "900";
         correctCountElement.textContent = "0";
 
-        timerInterval = setInterval(updateTimer, 1000);
+        timerInterval = setInterval(updateTimer, 15000);
       }
 
       function updateTimer() {
@@ -121,7 +121,7 @@
       }
 
       function resumeGame() {
-        timerInterval = setInterval(updateTimer, 1000);
+        timerInterval = setInterval(updateTimer, 15000);
         userInput.disabled = false;
         pauseButton.disabled = false;
         resumeButton.disabled = true;
@@ -141,7 +141,7 @@
         userInput.disabled = false;
         userInput.value = "";
         accuracyElement.textContent = "0%";
-        timerElement.textContent = "60";
+        timerElement.textContent = "900";
         correctCountElement.textContent = "0";
         startButton.disabled = false;
         pauseButton.disabled = true;
