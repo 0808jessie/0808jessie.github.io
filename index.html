@@ -1,31 +1,67 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>一分鐘打字測驗遊戲</title>
+    <title>打字測驗遊戲</title>
     <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #f2f2f2;
+      }
+
+      #game-container {
+        max-width: 600px;
+        width: 90%;
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      }
+
       #textToType {
         font-size: 18px;
         margin-bottom: 20px;
       }
+
+      #userInput {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+      }
     </style>
   </head>
   <body>
-    <h1>一分鐘打字測驗遊戲</h1>
-    <p id="textToType">
-      糖是一種毒素的說法，是取決於人體從不同類型的糖獲得能量的細節。現今美國人（臺灣人也一樣）主要以兩種形式吃糖：蔗糖和高果糖玉米糖漿。蔗糖，是由一個葡萄糖分子和一個果糖分子組成的雙糖。在
-      20世紀60年代，新的技術使美國玉米產業可以以低廉的成本，將來自玉米的葡萄糖轉換為果糖，生產高果糖玉米糖漿。
-    </p>
-    <textarea id="userInput" placeholder="在這裡輸入文字"></textarea>
-    <button id="startButton" onclick="startGame()">開始遊戲</button>
-    <button id="pauseButton" onclick="pauseGame()" disabled>暫停遊戲</button>
-    <button id="resumeButton" onclick="resumeGame()" disabled>繼續遊戲</button>
-    <button id="endButton" onclick="endGame()" disabled>結束遊戲</button>
-    <button id="restartButton" onclick="restartGame()" disabled>
-      重新開始
-    </button>
-    <p>正確率：<span id="accuracy">0%</span></p>
-    <p>倒計時：<span id="timer">60</span> 秒</p>
-    <p>答對字數：<span id="correctCount">0</span></p>
+    <div id="game-container">
+      <h1>15分鐘打字測驗遊戲</h1>
+      <p id="textToType">
+        糖是一種毒素的說法，是取決於人體從不同類型的糖獲得能量的細節。現今美國人（臺灣人也一樣）主要以兩種形式吃糖：蔗糖和高果糖玉米糖漿。蔗糖，是由一個葡萄糖分子和一個果糖分子組成的雙糖。在
+        20世紀60年代，新的技術使美國玉米產業可以以低廉的成本，將來自玉米的葡萄糖轉換為果糖，生產高果糖玉米糖漿。
+      </p>
+      <textarea id="userInput" placeholder="在這裡輸入文字"></textarea>
+      <button id="startButton" onclick="startGame()">開始遊戲</button>
+      <button id="pauseButton" onclick="pauseGame()" disabled>暫停遊戲</button>
+      <button id="resumeButton" onclick="resumeGame()" disabled>
+        繼續遊戲
+      </button>
+      <button id="endButton" onclick="endGame()" disabled>結束遊戲</button>
+      <button id="restartButton" onclick="restartGame()" disabled>
+        重新開始
+      </button>
+      <p>正確率：<span id="accuracy">0%</span></p>
+      <p>倒計時：<span id="timer">900</span> 秒</p>
+      <p>答對字數：<span id="correctCount">0</span></p>
+    </div>
 
     <script>
       var textToType = document
