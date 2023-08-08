@@ -78,6 +78,7 @@
       var timerElement = document.getElementById("timer");
       var correctCountElement = document.getElementById("correctCount");
       var timerInterval;
+      var initialTimer = 900; // 初始倒計時，15 分鐘為 900 秒
 
       function startGame() {
         startButton.disabled = true;
@@ -91,10 +92,10 @@
         userInput.value = "";
 
         accuracyElement.textContent = "0%";
-        timerElement.textContent = "900";
+        timerElement.textContent = initialTimer;
         correctCountElement.textContent = "0";
 
-        timerInterval = setInterval(updateTimer, 15000);
+        timerInterval = setInterval(updateTimer, 1000); // 每秒更新計時器
       }
 
       function updateTimer() {
