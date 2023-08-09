@@ -35,20 +35,30 @@
         margin-bottom: 10px;
       }
 
+      .incorrect {
+        border: 1px solid red;
+      }
+
       button {
         padding: 10px 20px;
         margin: 5px;
+      }
+      .input-line {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .input-line input {
+        width: 100%;
+        padding: 10px;
       }
     </style>
   </head>
   <body>
     <div id="game-container">
       <h1>15分鐘打字測驗遊戲</h1>
-      <p id="textToType">
-        糖是一種毒素的說法，是取決於人體從不同類型的糖獲得能量的細節。現今美國人（臺灣人也一樣）主要以兩種形式吃糖：蔗糖和高果糖玉米糖漿。蔗糖，是由一個葡萄糖分子和一個果糖分子組成的雙糖。在
-        20世紀60年代，新的技術使美國玉米產業可以以低廉的成本，將來自玉米的葡萄糖轉換為果糖，生產高果糖玉米糖漿。
-      </p>
-      <textarea id="userInput" placeholder="在這裡輸入文字"></textarea>
+      <div id="textToType"></div>
+      <div id="inputContainer"></div>
       <button id="startButton" onclick="startGame()">開始遊戲</button>
       <button id="pauseButton" onclick="pauseGame()" disabled>暫停遊戲</button>
       <button id="resumeButton" onclick="resumeGame()" disabled>
@@ -59,108 +69,231 @@
         重新開始
       </button>
       <p>正確率：<span id="accuracy">0%</span></p>
+      <p>打字速度：<span id="typingSpeed">0</span> 字/分鐘</p>
       <p>倒計時：<span id="timer">900</span> 秒</p>
       <p>答對字數：<span id="correctCount">0</span></p>
+      <p>輸入總字數：<span id="userInputCount">0</span></p>
+      <p>輸入錯誤字數：<span id="incorrectCount">0</span></p>
+      <p>完成時間：<span id="completionTime">0</span> 秒</p>
     </div>
 
     <script>
-      var textToType = document
-        .getElementById("textToType")
-        .textContent.trim()
-        .split("");
-      var userInput = document.getElementById("userInput");
+      var textLines = [
+        "糖是一種毒素的說法，是取決於人體從不同類型的糖獲得能量的細節。",
+        "現今美國人（臺灣人也一樣）主要以兩種形式吃糖：蔗糖和高果糖玉米糖漿。",
+        "蔗糖，是由一個葡萄糖分子和一個果糖分子組成的雙糖。",
+        "在 20世紀60年代，新的技術使美國玉米產業可以以低廉的成本，將來自玉米的葡萄糖轉換為果糖，生產高果糖玉米糖漿。",
+      ];
+
+      var currentLine = 0;
+      var userInputContainers = [];
+      var textToType = textLines.join("");
       var startButton = document.getElementById("startButton");
       var pauseButton = document.getElementById("pauseButton");
       var resumeButton = document.getElementById("resumeButton");
       var endButton = document.getElementById("endButton");
       var restartButton = document.getElementById("restartButton");
       var accuracyElement = document.getElementById("accuracy");
+      var typingSpeedElement = document.getElementById("typingSpeed");
       var timerElement = document.getElementById("timer");
       var correctCountElement = document.getElementById("correctCount");
+      var userInputCountElement = document.getElementById("userInputCount");
+      var incorrectCountElement = document.getElementById("incorrectCount");
+      var completionTimeElement = document.getElementById("completionTime");
       var timerInterval;
       var initialTimer = 900; // 初始倒計時，15 分鐘為 900 秒
+      var startTime;
+      var totalCharactersTyped = 0;
+      var correctCharactersTyped = 0;
+      var incorrectCharactersTyped = 0;
 
       function startGame() {
         startButton.disabled = true;
-        userInput.disabled = false;
         pauseButton.disabled = false;
         resumeButton.disabled = true;
         endButton.disabled = false;
         restartButton.disabled = true;
 
-        userInput.focus();
-        userInput.value = "";
-
         accuracyElement.textContent = "0%";
+        typingSpeedElement.textContent = "0";
         timerElement.textContent = initialTimer;
         correctCountElement.textContent = "0";
+        userInputCountElement.textContent = "0";
+        incorrectCountElement.textContent = "0";
+        completionTimeElement.textContent = "0";
 
+        startTime = Date.now();
         timerInterval = setInterval(updateTimer, 1000); // 每秒更新計時器
+
+        renderCurrentLine();
+      }
+
+      function renderCurrentLine() {
+        var currentText = textLines[currentLine];
+        var lineContainer = document.createElement("div");
+        var textToShow = document.createElement("p");
+        var inputElement = document.createElement("input");
+
+        lineContainer.classList.add("input-line");
+        lineContainer.style.flexDirection = "column"; // 將 flex 排列改為 column
+        inputElement.setAttribute("type", "text");
+        inputElement.setAttribute("placeholder", "在這裡輸入文字");
+        inputElement.addEventListener("input", handleInputChange);
+
+        textToShow.textContent = currentText;
+        lineContainer.appendChild(textToShow);
+        lineContainer.appendChild(inputElement);
+        inputContainer.appendChild(lineContainer);
+
+        userInputContainers[currentLine] = inputElement;
+      }
+
+      function handleInputChange() {
+        var inputText = userInputContainers[currentLine].value;
+        var correctText = textLines[currentLine];
+
+        if (inputText === correctText) {
+          userInputContainers[currentLine].classList.remove("incorrect");
+          currentLine++;
+
+          if (currentLine < textLines.length) {
+            renderCurrentLine();
+          } else {
+            endGame();
+          }
+        } else {
+          userInputContainers[currentLine].classList.add("incorrect");
+        }
+
+        updateStatistics();
       }
 
       function updateTimer() {
-        var timer = parseInt(timerElement.textContent);
-        timer--;
+        var currentTime = Date.now();
+        var elapsedTime = Math.floor((currentTime - startTime) / 1000);
+        var remainingTime = Math.max(initialTimer - elapsedTime, 0);
+        var completionTime = initialTimer - remainingTime;
 
-        if (timer === 0) {
+        if (remainingTime === 0) {
           clearInterval(timerInterval);
-          userInput.disabled = true;
-          pauseButton.disabled = true;
-          resumeButton.disabled = true;
+          disableInputs();
           endButton.disabled = true;
           restartButton.disabled = false;
         }
 
-        timerElement.textContent = timer;
+        timerElement.textContent = remainingTime;
+        completionTimeElement.textContent = completionTime;
+        updateStatistics();
+      }
+
+      function updateStatistics() {
+        var totalCharacters = textToType.length;
+        var inputText = userInputContainers
+          .map(function (input) {
+            return input.value;
+          })
+          .join("");
+        var correctText = textToType.slice(0, inputText.length);
+
+        totalCharactersTyped = inputText.length;
+        correctCharactersTyped = 0;
+        incorrectCharactersTyped = 0;
+
+        for (var i = 0; i < totalCharactersTyped; i++) {
+          if (inputText[i] === correctText[i]) {
+            correctCharactersTyped++;
+          } else {
+            incorrectCharactersTyped++;
+          }
+        }
+
+        var accuracy = (correctCharactersTyped / totalCharacters) * 100;
+        var elapsedTimeInMinutes =
+          (initialTimer - parseInt(timerElement.textContent)) / 60;
+        var typingSpeed = totalCharactersTyped / elapsedTimeInMinutes;
+
+        accuracyElement.textContent = accuracy.toFixed(2) + "%";
+        typingSpeedElement.textContent = typingSpeed.toFixed(2);
+        correctCountElement.textContent = correctCharactersTyped;
+        userInputCountElement.textContent = totalCharactersTyped;
+        incorrectCountElement.textContent = incorrectCharactersTyped;
       }
 
       function pauseGame() {
         clearInterval(timerInterval);
-        userInput.disabled = true;
+        disableInputs();
         pauseButton.disabled = true;
         resumeButton.disabled = false;
       }
 
       function resumeGame() {
-        timerInterval = setInterval(updateTimer, 15000);
-        userInput.disabled = false;
+        startTime =
+          Date.now() -
+          (initialTimer - parseInt(timerElement.textContent)) * 1000;
+        timerInterval = setInterval(updateTimer, 1000);
+        enableInputs();
         pauseButton.disabled = false;
         resumeButton.disabled = true;
-        userInput.focus();
+        focusCurrentInput();
       }
 
       function endGame() {
         clearInterval(timerInterval);
-        userInput.disabled = true;
+        disableInputs();
         pauseButton.disabled = true;
         resumeButton.disabled = true;
         endButton.disabled = true;
         restartButton.disabled = false;
+        updateStatistics();
       }
 
       function restartGame() {
-        userInput.disabled = false;
-        userInput.value = "";
+        clearInputs();
         accuracyElement.textContent = "0%";
+        typingSpeedElement.textContent = "0";
         timerElement.textContent = "900";
+        completionTimeElement.textContent = "0";
         correctCountElement.textContent = "0";
+        userInputCountElement.textContent = "0";
+        incorrectCountElement.textContent = "0";
         startButton.disabled = false;
         pauseButton.disabled = true;
         resumeButton.disabled = true;
         endButton.disabled = true;
         restartButton.disabled = true;
+        currentLine = 0; // 重置目前的行數
+        clearInterval(timerInterval); // 清除計時器
+
+        // 清除之前的文本和輸入框
+        var inputContainer = document.getElementById("inputContainer");
+        while (inputContainer.firstChild) {
+          inputContainer.removeChild(inputContainer.firstChild);
+        }
       }
 
-      userInput.addEventListener("input", function () {
-        var inputText = userInput.value.trim();
-        var correctText = textToType.slice(0, inputText.length).join("");
-        var accuracy = (correctText.length / textToType.length) * 100;
-        accuracyElement.textContent = accuracy.toFixed(2) + "%";
+      function disableInputs() {
+        userInputContainers.forEach(function (input) {
+          input.disabled = true;
+        });
+      }
 
-        if (inputText === correctText) {
-          correctCountElement.textContent = inputText.length;
+      function enableInputs() {
+        userInputContainers.forEach(function (input) {
+          input.disabled = false;
+        });
+      }
+
+      function clearInputs() {
+        userInputContainers.forEach(function (input) {
+          input.value = "";
+        });
+      }
+
+      function focusCurrentInput() {
+        if (userInputContainers[currentLine]) {
+          userInputContainers[currentLine].focus();
         }
-      });
+      }
     </script>
   </body>
 </html>
