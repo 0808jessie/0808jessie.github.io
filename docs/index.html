@@ -171,7 +171,24 @@
             endGame();
           }
         } else {
-          userInputContainers[currentLine].classList.add("incorrect");
+          if (correctText.startsWith(inputText)) {
+            userInputContainers[currentLine].classList.remove("incorrect");
+          } else {
+            userInputContainers[currentLine].classList.add("incorrect");
+          }
+
+          if (
+            inputText.endsWith(" ") ||
+            inputText.endsWith("，") ||
+            inputText.endsWith("。")
+          ) {
+            currentLine++;
+            if (currentLine < textLines.length) {
+              renderCurrentLine();
+            } else {
+              endGame();
+            }
+          }
         }
 
         updateStatistics();
@@ -303,6 +320,7 @@
           userInputContainers[currentLine].focus();
         }
       }
+
       // 當輸入框獲取焦點時，阻止手機瀏覽器自動放大
       userInputContainers.forEach(function (input) {
         input.addEventListener("focus", function () {
