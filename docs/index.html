@@ -298,6 +298,19 @@
           userInputContainers[currentLine].focus();
         }
       }
+      // 當輸入框獲取焦點時，阻止手機瀏覽器自動放大
+      userInputContainers.forEach(function (input) {
+        input.addEventListener("focus", function () {
+          var viewport = document.querySelector("meta[name=viewport]");
+          viewport.content =
+            "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0";
+        });
+
+        input.addEventListener("blur", function () {
+          var viewport = document.querySelector("meta[name=viewport]");
+          viewport.content = "width=device-width, initial-scale=1";
+        });
+      });
     </script>
   </body>
 </html>
