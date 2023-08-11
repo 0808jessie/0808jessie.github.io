@@ -346,7 +346,7 @@
           }
         }
 
-        var accuracy = (correctCharactersTyped / totalCharacters) * 100;
+        var accuracy = (correctCharactersTyped / totalCharactersTyped) * 100; // 修改這裡的計算公式
         var elapsedTimeInMinutes =
           (initialTimer - parseInt(timerElement.textContent)) / 60;
         var typingSpeed = totalCharactersTyped / elapsedTimeInMinutes;
