@@ -96,16 +96,21 @@
       <div id="textToType"></div>
       <div id="inputContainer"></div>
       <button id="startButton" onclick="startGame()">開始遊戲</button>
-      <button id="pauseButton" onclick="pauseGame()" disabled>暫停遊戲</button>
-      <button id="resumeButton" onclick="resumeGame()" disabled>
-        繼續遊戲
-      </button>
       <button id="endButton" onclick="endGame()" disabled>結束遊戲</button>
       <button id="restartButton" onclick="restartGame()" disabled>
         重新開始
       </button>
       <p id="timerText" style="display: none">
         倒計時：<span id="timer">900</span> 秒
+      </p>
+      <p id="userInputCountText" style="display: none">
+        輸入總字數：<span id="userInputCount">0</span>
+      </p>
+      <p id="correctCountText" style="display: none">
+        答對字數：<span id="correctCount">0</span>
+      </p>
+      <p id="incorrectCountText" style="display: none">
+        輸入錯誤字數：<span id="incorrectCount">0</span>
       </p>
       <p id="accuracyText" style="display: none">
         正確率：<span id="accuracy">0%</span>
@@ -115,15 +120,6 @@
       </p>
       <p id="completionTimeText" style="display: none">
         完成時間：<span id="completionTime">0</span> 秒
-      </p>
-      <p id="correctCountText" style="display: none">
-        答對字數：<span id="correctCount">0</span>
-      </p>
-      <p id="userInputCountText" style="display: none">
-        輸入總字數：<span id="userInputCount">0</span>
-      </p>
-      <p id="incorrectCountText" style="display: none">
-        輸入錯誤字數：<span id="incorrectCount">0</span>
       </p>
     </div>
 
@@ -207,8 +203,6 @@
       var userInputContainers = [];
       var textToType = textLines.join("");
       var startButton = document.getElementById("startButton");
-      var pauseButton = document.getElementById("pauseButton");
-      var resumeButton = document.getElementById("resumeButton");
       var endButton = document.getElementById("endButton");
       var restartButton = document.getElementById("restartButton");
       var accuracyElement = document.getElementById("accuracy");
@@ -219,7 +213,7 @@
       var incorrectCountElement = document.getElementById("incorrectCount");
       var completionTimeElement = document.getElementById("completionTime");
       var timerInterval;
-      var initialTimer = 900; // 初始倒計時，15 分鐘為 900 秒
+      var initialTimer = 900;
       var startTime;
       var totalCharactersTyped = 0;
       var correctCharactersTyped = 0;
@@ -227,13 +221,12 @@
       var gameStarted = false;
       var totalIncorrectCount = 0;
       var previousLineCorrectText = "";
+
       function startGame() {
         if (gameStarted) return;
 
         gameStarted = true;
         startButton.disabled = true;
-        pauseButton.disabled = false;
-        resumeButton.disabled = true;
         endButton.disabled = false;
         restartButton.disabled = true;
 
@@ -241,7 +234,7 @@
 
         timerElement.textContent = initialTimer;
         startTime = Date.now();
-        timerInterval = setInterval(updateTimer, 1000); // 每秒更新計時器
+        timerInterval = setInterval(updateTimer, 1000);
 
         renderCurrentLine();
       }
@@ -379,20 +372,17 @@
       function endGame() {
         clearInterval(timerInterval);
         disableInputs();
-        pauseButton.disabled = true;
-        resumeButton.disabled = true;
         endButton.disabled = true;
         restartButton.disabled = false;
         updateStatistics();
-
+        document.getElementById("userInputCountText").style.display = "block";
+        document.getElementById("completionTimeText").style.display = "block";
+        document.getElementById("incorrectCountText").style.display = "block";
         document.getElementById("accuracyText").style.display = "block";
         document.getElementById("typingSpeedText").style.display = "block";
-        document.getElementById("completionTimeText").style.display = "block";
         document.getElementById("correctCountText").style.display = "block";
-        document.getElementById("userInputCountText").style.display = "block";
-        document.getElementById("incorrectCountText").style.display = "block";
 
-        // 將錯誤的部分標記出來
+        // Mark incorrect characters
         for (var i = 0; i < userInputContainers.length; i++) {
           var inputText = userInputContainers[i].value;
           var correctText = textLines[i];
@@ -422,12 +412,10 @@
         userInputCountElement.textContent = "0";
         incorrectCountElement.textContent = "0";
         startButton.disabled = false;
-        pauseButton.disabled = true;
-        resumeButton.disabled = true;
         endButton.disabled = true;
         restartButton.disabled = true;
-        currentLine = 0; // 重置目前的行數
-        clearInterval(timerInterval); // 清除計時器
+        currentLine = 0;
+        clearInterval(timerInterval);
 
         document.getElementById("accuracyText").style.display = "none";
         document.getElementById("typingSpeedText").style.display = "none";
@@ -437,7 +425,7 @@
         document.getElementById("incorrectCountText").style.display = "none";
         document.getElementById("timerText").style.display = "none";
 
-        // 清除之前的文本和輸入框
+        // Clear previous text and input boxes
         var inputContainer = document.getElementById("inputContainer");
         while (inputContainer.firstChild) {
           inputContainer.removeChild(inputContainer.firstChild);
@@ -445,6 +433,8 @@
 
         gameStarted = false;
       }
+
+      // Rest of your
 
       function disableInputs() {
         userInputContainers.forEach(function (input) {
