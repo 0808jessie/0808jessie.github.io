@@ -80,13 +80,17 @@
         -ms-text-size-adjust: 100%; /* IE 11 支援 */
         -webkit-text-size-adjust: 100%; /* WebKit 支援，如 Safari */
       }
+      #inputContainer {
+        max-height: 60vh;
+        overflow-y: auto;
+      }
     </style>
   </head>
   <body>
     <div id="game-container">
       <h1>15分鐘打字測驗遊戲</h1>
       <p class="text-line">
-        每行最後一字都是完全對齊的，此部分需自行按TAB鍵進行換行。
+        每行最後一字都是完全對齊的，此部分需自行按「。」進行換行。
         <br />
         請注意若有漏字及多打都將造成後續所有字元被視為錯字。
         <br />
@@ -250,6 +254,8 @@
         inputElement.setAttribute("type", "text");
         inputElement.setAttribute("placeholder", "在這裡輸入文字");
         inputElement.addEventListener("input", handleInputChange);
+        var inputContainer = document.getElementById("inputContainer");
+        inputContainer.scrollTop = inputContainer.scrollHeight; // Scroll to the bottom
 
         textToShow.textContent = currentText;
         lineContainer.appendChild(textToShow);
@@ -264,7 +270,16 @@
         var correctText = textLines[currentLine];
 
         var lineContainer = userInputContainers[currentLine].parentElement;
-
+        var inputContainer = document.getElementById("inputContainer");
+        var currentInput = userInputContainers[currentLine];
+        if (
+          currentInput.getBoundingClientRect().bottom >
+          inputContainer.getBoundingClientRect().bottom
+        ) {
+          inputContainer.scrollTop +=
+            currentInput.getBoundingClientRect().bottom -
+            inputContainer.getBoundingClientRect().bottom;
+        }
         // 如果是新的行，重置錯誤計數
         if (correctText !== previousLineCorrectText) {
           previousLineCorrectText = correctText;
