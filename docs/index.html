@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>15分鐘的打字測驗</title>
+    <title>15分鐘的打字測驗遊戲</title>
 
     <meta
       name="viewport"
@@ -79,10 +79,6 @@
         max-height: 100px; /* 避免自動放大影響佈局 */
         -ms-text-size-adjust: 100%; /* IE 11 支援 */
         -webkit-text-size-adjust: 100%; /* WebKit 支援，如 Safari */
-      }
-      #inputContainer {
-        max-height: 60vh;
-        overflow-y: auto;
       }
     </style>
   </head>
@@ -254,8 +250,6 @@
         inputElement.setAttribute("type", "text");
         inputElement.setAttribute("placeholder", "在這裡輸入文字");
         inputElement.addEventListener("input", handleInputChange);
-        var inputContainer = document.getElementById("inputContainer");
-        inputContainer.scrollTop = inputContainer.scrollHeight; // Scroll to the bottom
 
         textToShow.textContent = currentText;
         lineContainer.appendChild(textToShow);
@@ -270,16 +264,7 @@
         var correctText = textLines[currentLine];
 
         var lineContainer = userInputContainers[currentLine].parentElement;
-        var inputContainer = document.getElementById("inputContainer");
-        var currentInput = userInputContainers[currentLine];
-        if (
-          currentInput.getBoundingClientRect().bottom >
-          inputContainer.getBoundingClientRect().bottom
-        ) {
-          inputContainer.scrollTop +=
-            currentInput.getBoundingClientRect().bottom -
-            inputContainer.getBoundingClientRect().bottom;
-        }
+
         // 如果是新的行，重置錯誤計數
         if (correctText !== previousLineCorrectText) {
           previousLineCorrectText = correctText;
@@ -301,12 +286,14 @@
 
         // 檢查是否達到換行條件
         if (inputText.endsWith(" ") || inputText.endsWith("。")) {
-          previousLineCorrectText = correctText; // 儲存上一行的正確文本
-          totalIncorrectCount += incorrectCharactersTyped; // 將本行錯誤數加到總錯誤數
-          incorrectCharactersTyped = 0; // 重置本行錯誤數
+          previousLineCorrectText = correctText;
+          totalIncorrectCount += incorrectCharactersTyped;
+          incorrectCharactersTyped = 0;
           currentLine++;
+
           if (currentLine < textLines.length) {
             renderCurrentLine();
+            scrollToNextLine(); // Scroll to the next line
           } else {
             endGame();
           }
@@ -447,6 +434,24 @@
         }
 
         gameStarted = false;
+      }
+
+      function scrollToNextLine() {
+        if (currentLine > 0) {
+          // Get the container of the previous input
+          var prevLineContainer =
+            userInputContainers[currentLine - 1].parentElement;
+
+          // Get the container of the current input
+          var currentLineContainer =
+            userInputContainers[currentLine].parentElement;
+
+          // Scroll the current line container into view
+          currentLineContainer.scrollIntoView({
+            behavior: "smooth", // You can change this to "auto" for instant scrolling
+            block: "start",
+          });
+        }
       }
 
       // Rest of your
