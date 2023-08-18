@@ -2,6 +2,7 @@
 <html>
   <head>
     <title>15分鐘的打字測驗遊戲</title>
+    <meta charset="UTF-8" />
 
     <meta
       name="viewport"
@@ -50,6 +51,7 @@
       }
       .incorrect {
         margin-top: 10px;
+        margin-right: 5px;
         border: 2px solid red;
       }
       .text-line {
@@ -66,7 +68,7 @@
         font-weight: bold;
       }
       .input-line {
-        display: flex;
+        /*display: flex;*/
         align-items: center;
         margin-bottom: 10px;
       }
@@ -100,6 +102,10 @@
       <button id="restartButton" onclick="restartGame()" disabled>
         重新開始
       </button>
+      <button id="downloadButton" onclick="downloadExcel()">
+        下載歷史紀錄
+      </button>
+
       <p id="timerText" style="display: none">
         倒計時：<span id="timer">900</span> 秒
       </p>
@@ -121,82 +127,108 @@
       <p id="completionTimeText" style="display: none">
         完成時間：<span id="completionTime">0</span> 秒
       </p>
+
+      <div id="recordsContainer" style="display: none">
+        <h2>過去測驗紀錄</h2>
+        <ul id="recordsList"></ul>
+      </div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 
     <script>
       var textLines = [
-        "糖是一種毒素的說法，是取決於人體從不同類型的糖獲得能量的細節。",
-
-        "現今美國人（臺灣人也一樣）主要以兩種形式吃糖：蔗糖和高果糖玉米糖漿。",
-
-        "蔗糖，是由一個葡萄糖分子和一個果糖分子組成的雙糖。",
-
-        "在20世紀60年代，新的技術使美國玉米產業可以以低廉的成本，將來自玉米的葡萄糖轉換為果糖，生產高果糖玉米糖漿。",
-
-        "雖然它的名字叫「高果糖」玉米糖漿，但是果糖和葡萄糖的比例幾乎是相等的：它含有55%果糖，42%葡萄糖和百分之三其他糖類。",
-
-        "由於果糖的甜度是葡萄糖的兩倍左右，作為一種廉價的糖漿，用來取代從甘蔗和甜菜而來的蔗糖，對廠商來說是非常有吸引力的。",
-
-        "無論我們吃的糖來自哪裡，我們的細胞會優先使用果糖和葡萄糖，而不是較大的蔗糖。",
-
-        "腸道內的酶在幾秒鐘內就會把蔗糖分割成葡萄糖和果糖，所以對人體 而言，蔗糖與高果糖玉米糖漿是一樣的。",
-
-        "但是對於其組成分子卻不盡然如此。",
-
-        "葡萄糖通過血液運輸到我們全身的組織，因為所有的細胞都能將葡萄糖轉化為能量。",
-
-        "相比之下，只有肝細胞以及極少數的其他細胞，可以將果糖轉化為能量，也就是說果糖代謝幾乎完全靠肝臟負責。",
-
-        "肝臟主要是將果糖轉化成葡萄糖和乳酸。",
-
-        "吃太多果糖會對肝臟造成負擔：肝臟要花許多的精力轉化果糖，造成其他功能無法執行，產生尿酸，造成痛風，腎結石和高血壓。",
-
-        "人體嚴格調節在血液中的葡萄糖（俗稱血糖）濃度。",
-
-        "葡萄糖刺激胰臟（中的胰腺）分泌胰島素，這有助於從血液中移除多餘的葡萄糖，並刺激瘦體素產生，從而抑制飢餓感。",
-        "果糖不會刺激胰島素分泌而且還會提高grehlin的產生，使我們更饑餓。",
-
-        "一些研究人員認為，吃太多果糖會使人們吃的比他們實際需要的更多。",
-
-        "由加州大學戴維斯分校的研究顯示，吃太多果糖造成脂肪生產增加（尤其在肝臟）。",
-        "血液中的三酸甘油酯升高，這些都是動脈堵塞和心血管疾病的危險因子。",
-
-        "有些研究發現脂肪肝與胰島素阻抗有關。",
-
-        "胰島素阻抗是細胞對胰島素的反應比平常低，造成胰腺需要製造更多的胰島素，直到它失去正確調節血糖的能力。",
-
-        "科羅拉多大學丹佛分校的Richard Johnson認為果糖代謝產生的尿酸也促進了胰島素阻抗。",
-
-        "而胰島素阻抗也被認為是導致肥胖和第二型糖尿病的主要因子；這三種疾病常常一起出現。",
-
-        "然而都不吃糖也不是什麼靈丹妙藥（筆者按：完全避免糖份的飲食其實不可能，因為蔬菜水果裡面含有糖份，肉類裡面有肝醣。",
-
-        "飲食中糖份太低對身體是有害的，因為我們的身體優先利用醣類，其次是脂肪，再其次才是蛋白質。",
-
-        "都不吃糖，會使得身體燃燒脂肪與蛋白質，有導致酮酸中毒ketoacidosis的風險）。",
-
-        "健康的飲食並不是只有拒絕第二塊方糖，或是把餅乾藏在櫃子裡不吃。",
-
-        "我們要怎麼處理我們的飲食中所有多餘的脂肪（很多都是搭配著糖呢）。",
-
-        "壞的膽固醇和鹽又要怎麼處理。",
-
-        "Sievenpiper 說：「如果有人越來越胖，糖的攝取是一定要減少的，但不要以為減少糖份的攝取後，我們就會成功減肥。",
-
-        "肥胖比這複雜多了。",
-        "在臨床上，的確有人是因為喝太多汽水和飲料發胖，但大多數人都只是吃太多。",
-
-        "然後還要吃更多的雜糧、水果和蔬菜、魚、瘦肉。",
-
-        "但是，均衡飲食只是健康的生活方式的一部分。",
-
-        "我們需要運動來鍛練我們的心臟，加強我們的肌肉和骨骼，並保持靈活。",
-
-        "運動，少吃加工食品，聽起來太簡單了，但比在我們的飲食中醜化單個分子來說，是一個更加細緻入微的方法。",
-
-        "美國人從1970年和2000年之間，每年每天多攝取530卡路里的同時，體力活動也越來越少。",
-
-        "真理是：大部分的人都應該努力吃少一點糖，但如果我們真正致力於保持健康，我們還要做更多。",
+        "糖是一種毒素的說法，是取決於人。",
+        "體從不同類型的糖獲得能量的細節。",
+        "現今美國人（臺灣人也一樣）主要。",
+        "以兩種形式吃糖：蔗糖和高果糖玉。",
+        "米糖漿，蔗糖，是由一個葡萄糖分。",
+        "子和一個果糖分子組成的雙糖，在。",
+        "20世紀60年代，新的技術使美國玉。",
+        "米產業可以以低廉的成本，將來自。",
+        "玉米的葡萄糖轉換為果糖，生產高。",
+        "果糖玉米糖漿，雖然它的名字叫「。",
+        "高果糖」玉米糖漿，但是果糖和葡。",
+        "萄糖的比例幾乎是相等的：它含有。",
+        "55%果糖，42%葡萄糖和百分之三其。",
+        "他糖類，由於果糖的甜度是葡萄糖。",
+        "的兩倍左右，作為一種廉價的糖漿。",
+        "用來取代從甘蔗和甜菜而來的蔗糖。",
+        "對廠商來說是非常有吸引力的，無。",
+        "論我們吃的糖來自哪裡，我們的細。",
+        "胞會優先使用果糖和葡萄糖，而不。",
+        "是較大的蔗糖，腸道內的酶在幾秒。",
+        "鐘內就會把蔗糖分割成葡萄糖和果。",
+        "糖，所以對人體而言，蔗糖與高果。",
+        "糖玉米糖漿是一樣的，但是對於其。",
+        "組成分子卻不盡然如此，葡萄糖通。",
+        "過血液運輸到我們全身的組織，因。",
+        "為所有的細胞都能將葡萄糖轉化為。",
+        "能量，相比之下，只有肝細胞以及。",
+        "極少數的其他細胞，可以將果糖轉。",
+        "化為能量，也就是說果糖代謝幾乎。",
+        "完全靠肝臟負責，肝臟主要是將果。",
+        "糖轉化成葡萄糖和乳酸，吃太多果。",
+        "糖會對肝臟造成負擔：肝臟要花許。",
+        "多的精力轉化果糖，造成其他功能。",
+        "無法執行，產生尿酸，造成痛風，。",
+        "腎結石和高血壓，人體嚴格調節在。",
+        "血液中的葡萄糖（俗稱血糖）濃度。",
+        "葡萄糖刺激胰臟（中的胰腺）分泌。",
+        "胰島素，這有助於從血液中移除多。",
+        "餘的葡萄糖，並刺激瘦體素產生，。",
+        "從而抑制飢餓感，果糖不會刺激胰。",
+        "島素分泌而且還會提高grehlin的。",
+        "產生，使我們更饑餓，一些研究人。",
+        "員認為，吃太多果糖會使人們吃的。",
+        "比他們實際需要的更多，由加州大。",
+        "學戴維斯分校的研究顯示，吃太多。",
+        "果糖造成脂肪生產增加（尤其在肝。",
+        "臟），血液中的三酸甘油酯升高，。",
+        "這些都是動脈堵塞和心血管疾病的。",
+        "危險因子，有些研究發現脂肪肝與。",
+        "胰島素阻抗有關，胰島素阻抗是細。",
+        "胞對胰島素的反應比平常低，造成。",
+        "胰腺需要製造更多的胰島素，直到。",
+        "它失去正確調節血糖的能力，科羅。",
+        "拉多大學丹佛分校的Richard Johnson。",
+        "認為果糖代謝產生的尿酸也促進了。",
+        "胰島素阻抗，而胰島素阻抗也被認。",
+        "為是導致肥胖和第二型糖尿病的主。",
+        "要因子；這三種疾病常常一起出現。",
+        "然而都不吃糖也不是什麼靈丹妙藥。",
+        "（筆者按：完全避免糖份的飲食其。",
+        "實不可能，因為蔬菜水果裡面含有。",
+        "糖份，肉類裡面有肝醣，飲食中糖。",
+        "份太低對身體是有害的，因為我們。",
+        "的身體優先利用醣類，其次是脂肪。",
+        "再其次才是蛋白質，都不吃糖，會。",
+        "使得身體燃燒脂肪與蛋白質，有導。",
+        "致酮酸中毒ketoacidosis的風險）。",
+        "健康的飲食並不是只有拒絕第二塊。",
+        "方糖，或是把餅乾藏在櫃子裡不吃。",
+        "我們要怎麼處理我們的飲食中所有。",
+        "多餘的脂肪（很多都是搭配著糖呢）。",
+        "壞的膽固醇和鹽又要怎麼處理。。",
+        "Sievenpiper 說：「如果有人越來。",
+        "越胖，糖的攝取是一定要減少的，。",
+        "但不要以為減少糖份的攝取後，我。",
+        "們就會成功減肥，肥胖比這複雜多。",
+        "了，在臨床上，的確有人是因為喝。",
+        "太多汽水和飲料發胖，但大多數人。",
+        "都只是吃太多，然後還要吃更多的。",
+        "雜糧、水果和蔬菜、魚、瘦肉，但。",
+        "是，均衡飲食只是健康的生活方式。",
+        "的一部分，我們需要運動來鍛練我。",
+        "們的心臟，加強我們的肌肉和骨骼。",
+        "並保持靈活，運動，少吃加工食品。",
+        "聽起來太簡單了，但比在我們的飲。",
+        "食中醜化單個分子來說，是一個更。",
+        "加細緻入微的方法，美國人從1970。",
+        "年和2000年之間，每年每天多攝取。",
+        "530卡路里的同時，體力活動也越來。",
+        "越少，真理是：大部分的人都應該。",
+        "努力吃少一點糖，但如果我們真正。",
+        "致力於保持健康，我們還要做更多。。",
       ];
 
       var currentLine = 0;
@@ -285,7 +317,7 @@
         }
 
         // 檢查是否達到換行條件
-        if (inputText.endsWith(" ") || inputText.endsWith("。")) {
+        if (inputText.endsWith("。")) {
           previousLineCorrectText = correctText;
           totalIncorrectCount += incorrectCharactersTyped;
           incorrectCharactersTyped = 0;
@@ -383,7 +415,10 @@
         document.getElementById("accuracyText").style.display = "block";
         document.getElementById("typingSpeedText").style.display = "block";
         document.getElementById("correctCountText").style.display = "block";
-
+        // Show records section
+        document.getElementById("recordsContainer").style.display = "block";
+        // Create and update the record entry
+        updateRecords();
         // Mark incorrect characters
         for (var i = 0; i < userInputContainers.length; i++) {
           var inputText = userInputContainers[i].value;
@@ -403,7 +438,35 @@
           }
         }
       }
+      function updateRecords() {
+        var recordsList = document.getElementById("recordsList");
+        var recordEntry = document.createElement("li");
+        var testIndex = recordsList.children.length + 1;
 
+        recordEntry.innerHTML =
+          "第" +
+          testIndex +
+          "次" +
+          "測驗 " +
+          "<br>" +
+          "輸入總字數：" +
+          correctCountElement.textContent +
+          "，答對字數：" +
+          userInputCountElement.textContent +
+          "，輸入錯誤字數：" +
+          incorrectCountElement.textContent +
+          "<br>" +
+          "正確率：" +
+          accuracyElement.textContent +
+          "，打字速度：" +
+          typingSpeedElement.textContent +
+          " 字/分鐘" +
+          "，完成時間：" +
+          completionTimeElement.textContent +
+          " 秒";
+
+        recordsList.appendChild(recordEntry);
+      }
       function restartGame() {
         clearInputs();
         accuracyElement.textContent = "0%";
@@ -472,6 +535,48 @@
         userInputContainers.forEach(function (input) {
           input.value = "";
         });
+      }
+
+      function downloadExcel() {
+        var recordsList = document.getElementById("recordsList").children;
+        var workbook = XLSX.utils.book_new();
+        var worksheetData = [["測驗結果"]];
+
+        // Create worksheet data
+        for (var i = 0; i < recordsList.length; i++) {
+          var recordText = recordsList[i].textContent.replace(/\n/g, " ");
+          var rowData = recordText.split(",");
+          worksheetData.push(rowData);
+        }
+
+        var worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        XLSX.utils.book_append_sheet(workbook, worksheet, "TypingTestRecords");
+
+        // Create a Blob with the Excel content
+        var blob = new Blob(
+          [s2ab(XLSX.write(workbook, { bookType: "xlsx", type: "binary" }))],
+          {
+            type: "application/octet-stream",
+          }
+        );
+
+        // Create a download link
+        var link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "typing_test_records.xlsx";
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+
+        // Clean up the link element
+        document.body.removeChild(link);
+      }
+
+      function s2ab(s) {
+        var buf = new ArrayBuffer(s.length);
+        var view = new Uint8Array(buf);
+        for (var i = 0; i != s.length; ++i) view[i] = s.charCodeAt(i) & 0xff;
+        return buf;
       }
 
       function focusCurrentInput() {
