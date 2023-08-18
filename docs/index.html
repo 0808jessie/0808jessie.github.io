@@ -12,28 +12,27 @@
     <style>
       body {
         font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
+        margin: 10px;
+        padding: 10px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background-color: #f2f2f2;
+        background-color: #ffffff;
       }
 
       #game-container {
         max-width: 600px;
         width: 90%;
-        background-color: white;
         padding: 20px;
-        border-radius: 5px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
       }
 
       #textToType {
         font-size: 18px;
         margin-bottom: 20px;
+        text-align: center;
       }
 
       #userInput {
@@ -59,6 +58,7 @@
         padding: 10px;
         margin-bottom: 10px;
         border-radius: 10px;
+        text-align: left;
       }
       button {
         padding: 10px 20px;
@@ -71,16 +71,21 @@
         /*display: flex;*/
         align-items: center;
         margin-bottom: 10px;
+        text-align: center;
       }
       .input-line input {
         border: 1px solid #2d2d2d;
         border-radius: 10px;
         width: 95%;
         padding: 10px;
+        text-align: center;
         font-size: 16px; /* 調整您希望的字體大小 */
         max-height: 100px; /* 避免自動放大影響佈局 */
         -ms-text-size-adjust: 100%; /* IE 11 支援 */
         -webkit-text-size-adjust: 100%; /* WebKit 支援，如 Safari */
+      }
+      .center {
+        text-align: center;
       }
     </style>
   </head>
@@ -94,7 +99,8 @@
         <br />
         每個標點符號皆為全形。
       </p>
-
+    </div>
+    <div id="center">
       <div id="textToType"></div>
       <div id="inputContainer"></div>
       <button id="startButton" onclick="startGame()">開始測驗</button>
