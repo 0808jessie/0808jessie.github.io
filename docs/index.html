@@ -350,6 +350,9 @@
           disableInputs();
           endButton.disabled = true;
           restartButton.disabled = false;
+
+          // Call endGame() to handle ending the game and displaying results
+          endGame();
         }
 
         timerElement.textContent = remainingTime;
@@ -414,17 +417,22 @@
         endButton.disabled = true;
         restartButton.disabled = false;
         updateStatistics();
+        markIncorrectCharacters();
+        displayGameStatistics(); // Display statistics even when the game ends
+        document.getElementById("recordsContainer").style.display = "block";
+        updateRecords();
+      }
+      function displayGameStatistics() {
         document.getElementById("userInputCountText").style.display = "block";
         document.getElementById("completionTimeText").style.display = "block";
         document.getElementById("incorrectCountText").style.display = "block";
         document.getElementById("accuracyText").style.display = "block";
         document.getElementById("typingSpeedText").style.display = "block";
         document.getElementById("correctCountText").style.display = "block";
-        // Show records section
-        document.getElementById("recordsContainer").style.display = "block";
-        // Create and update the record entry
-        updateRecords();
-        // Mark incorrect characters
+        document.getElementById("timerText").style.display = "none"; // Hide timer
+      }
+
+      function markIncorrectCharacters() {
         for (var i = 0; i < userInputContainers.length; i++) {
           var inputText = userInputContainers[i].value;
           var correctText = textLines[i];
@@ -443,6 +451,7 @@
           }
         }
       }
+
       function updateRecords() {
         var recordsList = document.getElementById("recordsList");
         var recordEntry = document.createElement("li");
