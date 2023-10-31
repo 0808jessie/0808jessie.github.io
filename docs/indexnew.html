@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>16分鐘的打字測驗</title>
+    <meta charset="UTF-8" />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
+    />
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 10px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #ffffff;
+      }
+
+      #game-container {
+        max-width: 600px;
+        width: 90%;
+        padding: 20px;
+        text-align: center;
+      }
+
+      #textToType {
+        font-size: 18px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      #userInput {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ff4444;
+      }
+      .show {
+        font-weight: bold;
+        margin: 0;
+        padding: 5px;
+        border-radius: 10px;
+        background-color: #f2f2f2;
+      }
+      .incorrect {
+        margin-top: 10px;
+        margin-right: 5px;
+        border: 2px solid red;
+      }
+      .text-line {
+        border: 1px solid #ff4444;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 10px;
+        text-align: left;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 10px;
+        border: 2px solid #0094d9;
+        font-weight: bold;
+      }
+      .input-line {
+        /*display: flex;*/
+        align-items: center;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      .input-line input {
+        border: 1px solid #2d2d2d;
+        border-radius: 10px;
+        width: 95%;
+        padding: 10px;
+        text-align: center;
+        font-size: 16px; /* 調整您希望的字體大小 */
+        max-height: 100px; /* 避免自動放大影響佈局 */
+        -ms-text-size-adjust: 100%; /* IE 11 支援 */
+        -webkit-text-size-adjust: 100%; /* WebKit 支援，如 Safari */
+      }
+      .center {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <h1>16分鐘打字測驗</h1>
+      <p class="text-line">
+        每行最後一字都是完全對齊的，此部分需自行按「。」進行換行。
+        <br />
+        請注意若有漏字及多打都將造成後續所有字元被視為錯字。
+        <br />
+        每個標點符號皆為全形。
+      </p>
+    </div>
+    <div id="center">
+      <div id="textToType"></div>
+      <div id="inputContainer"></div>
+      <button id="startButton" onclick="startGame()">開始測驗</button>
+      <button id="endButton" onclick="endGame()" disabled>結束測驗</button>
+      <button id="restartButton" onclick="restartGame()" disabled>
+        重新開始
+      </button>
+      <button id="downloadButton" onclick="downloadExcel()">
+        下載歷史紀錄
+      </button>
+
+      <p id="timerText" style="display: none">
+        倒計時：<span id="timer">960</span> 秒
+      </p>
+      <p id="userInputCountText" style="display: none">
+        輸入總字數：<span id="userInputCount">0</span>
+      </p>
+      <p id="correctCountText" style="display: none">
+        答對字數：<span id="correctCount">0</span>
+      </p>
+      <p id="incorrectCountText" style="display: none">
+        輸入錯誤字數：<span id="incorrectCount">0</span>
+      </p>
+      <p id="accuracyText" style="display: none">
+        正確率：<span id="accuracy">0%</span>
+      </p>
+      <p id="typingSpeedText" style="display: none">
+        打字速度：<span id="typingSpeed">0</span> 字/分鐘
+      </p>
+      <p id="completionTimeText" style="display: none">
+        完成時間：<span id="completionTime">0</span> 秒
+      </p>
+
+      <div id="recordsContainer" style="display: none">
+        <h2>過去測驗紀錄</h2>
+        <ul id="recordsList"></ul>
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+
+    <script>
+      var textLines = [
+        "我是一個古怪的女孩從小被目為。",
+        "天才除了發展我的天才外別無生。",
+        "存的目標然而當童年的狂想逐漸。",
+        "褪色的時候我發現我除了天才的。",
+        "夢之外一無所有——所有的只是。",
+        "天才的乖僻缺點世人原諒瓦格涅。",
+        "的疏狂可是他們不會原諒我加上。",
+        "一點美國式的宣傳也許我會被譽。",
+        "為神童我三歲時能背誦唐詩我還。",
+        "記得搖搖擺擺地立在一個滿清遺。",
+        "老的藤椅前朗吟商女不知亡國恨。",
+        "隔江猶唱後庭花眼看著他的淚珠。",
+        "滾下來七歲時我寫了第一部小說。",
+        "一個家庭悲劇遇到筆畫複雜的字。",
+        "我常常跑去問廚子怎樣寫第二部。",
+        "小說是關於一個失戀自殺的女郎。",
+        "我母親批評說如果她要自殺她決。",
+        "不會從上海乘火車到西湖去自溺。",
+        "可是我因為西湖詩意的背景終於。",
+        "固執地保存了這一點我僅有的課。",
+        "外讀物是西游記與少量的童話但。",
+        "我的思想並不為它們所束縛八歲。",
+        "那年我嘗試過一篇類似烏托邦的。",
+        "小說題名快樂村快樂村人是一好。",
+        "戰的高原民族因克服苗人有功蒙。",
+        "中國皇帝特許免征賦稅並予自治。",
+        "權所以快樂村是一個與外界隔絕。",
+        "的大家庭自耕自織保存著部落時。",
+        "代的活潑文化我特地將半打練習。",
+        "簿縫在一起預期一本洋洋大作然。",
+        "而不久我就對這偉大的題材失去。",
+        "了興趣現在我仍舊保存著我所繪。",
+        "的插畫多幀介紹這种理想社會的。",
+        "服務建筑室內裝修包括圖書館演。",
+        "武廳巧克力店屋頂花園公共餐室。",
+        "是荷花池裡一座涼亭我不記得那。",
+        "裡有沒有電影院與社會主義——。",
+        "雖然缺少這兩樣文明產物他們似。",
+        "乎也過得很好九歲時我躊躇著不。",
+        "知道應當選擇音樂或美術作我終。",
+        "身的事業看了一張描寫窮困的畫。",
+        "家的影片後我哭了一場決定做一。",
+        "個鋼琴家在富麗堂皇的音樂廳裡。",
+        "演奏對於色彩音符字眼我極為敏。",
+        "感當我彈奏鋼琴時我想像那八個。",
+        "音符有不同的個性穿戴了鮮艷的。",
+        "衣帽攜手舞蹈我學寫文章愛用色。",
+        "彩濃厚音韻鏗鏘的字眼如珠灰黃。",
+        "昏婉妙因此常犯了堆砌的毛病在。",
+        "學校裡我得到自由發展我的自信。",
+        "心日益堅強直到我十六歲時我母。",
+        "親從法國回來將她睽隔多年的女。",
+        "兒研究了一下我懊侮從前小心看。",
+        "護你的傷寒症她告訴我我寧願看。",
+        "你死不願看你活著使你自己處處。",
+        "受痛苦我發現我不會削蘋果經過。",
+        "艱苦的努力我才學會補襪子我怕。",
+        "上理髮店怕見客怕給裁縫試衣裳。",
+        "許多人嘗試過教我織絨線可是沒。",
+        "有一個成功在一間房裡住了兩年。",
+        "問我電鈴在哪兒我還茫然我天天。",
+        "乘黃包車上醫院去打針接連三個。",
+        "月仍然不認識那條路總而言之在。",
+        "現實的社會裡我等於一個廢物我。",
+        "母親給我兩年的時間學習適應環。",
+        "境她教我煮飯用肥皂粉洗衣練習。",
+        "行路的姿勢看人的眼色點燈後記。",
+        "得拉上窗簾照鏡子研究面部神態。",
+        "如果沒有幽默天才千萬別說笑話。",
+        "在待人接物的常識方面我顯露驚。",
+        "人的愚笨我的兩年計劃是一個失。",
+        "敗的試驗除了使我的思想失去均。",
+        "衡外我母親的沉痛警告沒有給我。",
+        "任何的影響生活的藝術有一部分。",
+        "我不是不能領略我懂得怎麼看七。",
+        "月巧雲聽蘇格蘭兵吹享受微風中。",
+        "的藤椅吃鹽水花生欣賞雨夜的霓。",
+        "虹燈從雙層公共汽車上伸出手摘。",
+        "樹巔的綠葉在沒有人與人交接的。",
+        "場合我充滿了生命的歡悅可是我。",
+        "一天不能克服這种咬嚙性的小煩。",
+        "惱生命是一襲華美的袍爬滿了蚤。",
+        "子。",
+      ];
+
+      var currentLine = 0;
+      var userInputContainers = [];
+      var textToType = textLines.join("");
+      var startButton = document.getElementById("startButton");
+      var endButton = document.getElementById("endButton");
+      var restartButton = document.getElementById("restartButton");
+      var accuracyElement = document.getElementById("accuracy");
+      var typingSpeedElement = document.getElementById("typingSpeed");
+      var timerElement = document.getElementById("timer");
+      var correctCountElement = document.getElementById("correctCount");
+      var userInputCountElement = document.getElementById("userInputCount");
+      var incorrectCountElement = document.getElementById("incorrectCount");
+      var completionTimeElement = document.getElementById("completionTime");
+      var timerInterval;
+      var initialTimer = 960;
+      var startTime;
+      var totalCharactersTyped = 0;
+      var correctCharactersTyped = 0;
+      var incorrectCharactersTyped = 0;
+      var gameStarted = false;
+      var totalIncorrectCount = 0;
+      var previousLineCorrectText = "";
+
+      function startGame() {
+        if (gameStarted) return;
+
+        gameStarted = true;
+        startButton.disabled = true;
+        endButton.disabled = false;
+        restartButton.disabled = true;
+
+        document.getElementById("timerText").style.display = "block";
+
+        timerElement.textContent = initialTimer;
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+
+        renderCurrentLine();
+      }
+
+      function renderCurrentLine() {
+        var currentText = textLines[currentLine];
+        var lineContainer = document.createElement("div");
+        var textToShow = document.createElement("p");
+        var inputElement = document.createElement("input");
+
+        lineContainer.classList.add("input-line");
+        lineContainer.style.flexDirection = "column"; // 將 flex 排列改為 column
+        inputElement.setAttribute("type", "text");
+        inputElement.setAttribute("placeholder", "在這裡輸入文字");
+        inputElement.addEventListener("input", handleInputChange);
+
+        textToShow.textContent = currentText;
+        lineContainer.appendChild(textToShow);
+        lineContainer.appendChild(inputElement);
+        inputContainer.appendChild(lineContainer);
+
+        userInputContainers[currentLine] = inputElement;
+      }
+
+      function handleInputChange() {
+        var inputText = userInputContainers[currentLine].value;
+        var correctText = textLines[currentLine];
+
+        var lineContainer = userInputContainers[currentLine].parentElement;
+
+        // 如果是新的行，重置錯誤計數
+        if (correctText !== previousLineCorrectText) {
+          previousLineCorrectText = correctText;
+          totalIncorrectCount -= incorrectCharactersTyped;
+          incorrectCharactersTyped = 0;
+        }
+
+        for (var i = 0; i < inputText.length; i++) {
+          var charSpan = lineContainer.children[i].nextSibling;
+          if (!charSpan) break;
+
+          if (inputText[i] === correctText[i]) {
+            charSpan.classList.remove("incorrect");
+          } else {
+            charSpan.classList.add("incorrect");
+            incorrectCharactersTyped++;
+          }
+        }
+
+        // 檢查是否達到換行條件
+        if (inputText.endsWith("。")) {
+          previousLineCorrectText = correctText;
+          totalIncorrectCount += incorrectCharactersTyped;
+          incorrectCharactersTyped = 0;
+          currentLine++;
+
+          if (currentLine < textLines.length) {
+            renderCurrentLine();
+            scrollToNextLine(); // Scroll to the next line
+          } else {
+            endGame();
+          }
+        }
+
+        updateStatistics();
+      }
+
+      function updateTimer() {
+        var currentTime = Date.now();
+        var elapsedTime = Math.floor((currentTime - startTime) / 1000);
+        var remainingTime = Math.max(initialTimer - elapsedTime, 0);
+        var completionTime = initialTimer - remainingTime;
+
+        if (remainingTime === 0) {
+          clearInterval(timerInterval);
+          disableInputs();
+          endButton.disabled = true;
+          restartButton.disabled = false;
+
+          // Call endGame() to handle ending the game and displaying results
+          endGame();
+        }
+
+        timerElement.textContent = remainingTime;
+        completionTimeElement.textContent = completionTime;
+        updateStatistics();
+      }
+
+      function updateStatistics() {
+        var totalCharacters = textToType.length;
+        var inputText = userInputContainers
+          .map(function (input) {
+            return input.value;
+          })
+          .join("");
+        var correctText = textToType.slice(0, inputText.length);
+
+        totalCharactersTyped = inputText.length;
+        correctCharactersTyped = 0;
+        incorrectCharactersTyped = 0;
+
+        for (var i = 0; i < totalCharactersTyped; i++) {
+          if (inputText[i] === correctText[i]) {
+            correctCharactersTyped++;
+          } else {
+            incorrectCharactersTyped++;
+          }
+        }
+
+        var accuracy = (correctCharactersTyped / totalCharactersTyped) * 100; // 修改這裡的計算公式
+        var elapsedTimeInMinutes =
+          (initialTimer - parseInt(timerElement.textContent)) / 60;
+        var typingSpeed = totalCharactersTyped / elapsedTimeInMinutes;
+
+        accuracyElement.textContent = accuracy.toFixed(2) + "%";
+        typingSpeedElement.textContent = typingSpeed.toFixed(2);
+        correctCountElement.textContent = correctCharactersTyped;
+        userInputCountElement.textContent = totalCharactersTyped;
+        incorrectCountElement.textContent = incorrectCharactersTyped;
+      }
+
+      function pauseGame() {
+        clearInterval(timerInterval);
+        disableInputs();
+        pauseButton.disabled = true;
+        resumeButton.disabled = false;
+      }
+
+      function resumeGame() {
+        startTime =
+          Date.now() -
+          (initialTimer - parseInt(timerElement.textContent)) * 1000;
+        timerInterval = setInterval(updateTimer, 1000);
+        enableInputs();
+        pauseButton.disabled = false;
+        resumeButton.disabled = true;
+        focusCurrentInput();
+      }
+
+      function endGame() {
+        clearInterval(timerInterval);
+        disableInputs();
+        endButton.disabled = true;
+        restartButton.disabled = false;
+        updateStatistics();
+        markIncorrectCharacters();
+        displayGameStatistics(); // Display statistics even when the game ends
+        document.getElementById("recordsContainer").style.display = "block";
+        updateRecords();
+      }
+      function displayGameStatistics() {
+        document.getElementById("userInputCountText").style.display = "block";
+        document.getElementById("completionTimeText").style.display = "block";
+        document.getElementById("incorrectCountText").style.display = "block";
+        document.getElementById("accuracyText").style.display = "block";
+        document.getElementById("typingSpeedText").style.display = "block";
+        document.getElementById("correctCountText").style.display = "block";
+        document.getElementById("timerText").style.display = "none"; // Hide timer
+      }
+
+      function markIncorrectCharacters() {
+        for (var i = 0; i < userInputContainers.length; i++) {
+          var inputText = userInputContainers[i].value;
+          var correctText = textLines[i];
+          var lineContainer = userInputContainers[i].parentElement;
+
+          for (var j = 0; j < inputText.length; j++) {
+            if (inputText[j] !== correctText[j]) {
+              var incorrectChar = document.createElement("span");
+              incorrectChar.textContent = inputText[j];
+              incorrectChar.classList.add("incorrect");
+              lineContainer.insertBefore(
+                incorrectChar,
+                lineContainer.children[j + 1]
+              );
+            }
+          }
+        }
+      }
+
+      function updateRecords() {
+        var recordsList = document.getElementById("recordsList");
+        var recordEntry = document.createElement("li");
+        var testIndex = recordsList.children.length + 1;
+
+        recordEntry.innerHTML =
+          "第" +
+          testIndex +
+          "次" +
+          "測驗 " +
+          "<br>" +
+          "輸入總字數：" +
+          userInputCountElement.textContent +
+          "，答對字數：" +
+          correctCountElement.textContent +
+          "，輸入錯誤字數：" +
+          incorrectCountElement.textContent +
+          "<br>" +
+          "正確率：" +
+          accuracyElement.textContent +
+          "，打字速度：" +
+          typingSpeedElement.textContent +
+          " 字/分鐘" +
+          "，完成時間：" +
+          completionTimeElement.textContent +
+          " 秒";
+
+        recordsList.appendChild(recordEntry);
+      }
+      function restartGame() {
+        clearInputs();
+        accuracyElement.textContent = "0%";
+        typingSpeedElement.textContent = "0";
+        timerElement.textContent = "900";
+        completionTimeElement.textContent = "0";
+        correctCountElement.textContent = "0";
+        userInputCountElement.textContent = "0";
+        incorrectCountElement.textContent = "0";
+        startButton.disabled = false;
+        endButton.disabled = true;
+        restartButton.disabled = true;
+        currentLine = 0;
+        clearInterval(timerInterval);
+
+        document.getElementById("accuracyText").style.display = "none";
+        document.getElementById("typingSpeedText").style.display = "none";
+        document.getElementById("completionTimeText").style.display = "none";
+        document.getElementById("correctCountText").style.display = "none";
+        document.getElementById("userInputCountText").style.display = "none";
+        document.getElementById("incorrectCountText").style.display = "none";
+        document.getElementById("timerText").style.display = "none";
+
+        // Clear previous text and input boxes
+        var inputContainer = document.getElementById("inputContainer");
+        while (inputContainer.firstChild) {
+          inputContainer.removeChild(inputContainer.firstChild);
+        }
+
+        gameStarted = false;
+      }
+
+      function scrollToNextLine() {
+        if (currentLine > 0) {
+          // Get the container of the previous input
+          var prevLineContainer =
+            userInputContainers[currentLine - 1].parentElement;
+
+          // Get the container of the current input
+          var currentLineContainer =
+            userInputContainers[currentLine].parentElement;
+
+          // Scroll the current line container into view
+          currentLineContainer.scrollIntoView({
+            behavior: "smooth", // You can change this to "auto" for instant scrolling
+            block: "start",
+          });
+        }
+      }
+
+      // Rest of your
+
+      function disableInputs() {
+        userInputContainers.forEach(function (input) {
+          input.disabled = true;
+        });
+      }
+
+      function enableInputs() {
+        userInputContainers.forEach(function (input) {
+          input.disabled = false;
+        });
+      }
+
+      function clearInputs() {
+        userInputContainers.forEach(function (input) {
+          input.value = "";
+        });
+      }
+
+      function downloadExcel() {
+        var recordsList = document.getElementById("recordsList").children;
+        var workbook = XLSX.utils.book_new();
+        var worksheetData = [["測驗結果"]];
+
+        // Create worksheet data
+        for (var i = 0; i < recordsList.length; i++) {
+          var recordText = recordsList[i].textContent.replace(/\n/g, " ");
+          var rowData = recordText.split(",");
+          worksheetData.push(rowData);
+        }
+
+        var worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        XLSX.utils.book_append_sheet(workbook, worksheet, "TypingTestRecords");
+
+        // Create a Blob with the Excel content
+        var blob = new Blob(
+          [s2ab(XLSX.write(workbook, { bookType: "xlsx", type: "binary" }))],
+          {
+            type: "application/octet-stream",
+          }
+        );
+
+        // Create a download link
+        var link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "typing_test_records.xlsx";
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+
+        // Clean up the link element
+        document.body.removeChild(link);
+      }
+
+      function s2ab(s) {
+        var buf = new ArrayBuffer(s.length);
+        var view = new Uint8Array(buf);
+        for (var i = 0; i != s.length; ++i) view[i] = s.charCodeAt(i) & 0xff;
+        return buf;
+      }
+
+      function focusCurrentInput() {
+        if (userInputContainers[currentLine]) {
+          userInputContainers[currentLine].focus();
+        }
+      }
+
+      // 當輸入框獲取焦點時，阻止手機瀏覽器自動放大
+      userInputContainers.forEach(function (input) {
+        input.addEventListener("focus", function () {
+          var viewport = document.querySelector("meta[name=viewport]");
+          viewport.content =
+            "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0";
+        });
+
+        input.addEventListener("blur", function () {
+          var viewport = document.querySelector("meta[name=viewport]");
+          viewport.content = "width=device-width, initial-scale=1";
+        });
+      });
+    </script>
+  </body>
+</html>
