@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>16分鐘的打字測驗</title>
+    <meta charset="UTF-8" />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
+    />
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 10px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #ffffff;
+      }
+
+      #game-container {
+        max-width: 600px;
+        width: 90%;
+        padding: 20px;
+        text-align: center;
+      }
+
+      #textToType {
+        font-size: 18px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      #userInput {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ff4444;
+      }
+      .show {
+        font-weight: bold;
+        margin: 0;
+        padding: 5px;
+        border-radius: 10px;
+        background-color: #f2f2f2;
+      }
+      .incorrect {
+        margin-top: 10px;
+        margin-right: 5px;
+        border: 2px solid red;
+      }
+      .text-line {
+        border: 1px solid #ff4444;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 10px;
+        text-align: left;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 10px;
+        border: 2px solid #0094d9;
+        font-weight: bold;
+      }
+      .input-line {
+        /*display: flex;*/
+        align-items: center;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      .input-line input {
+        border: 1px solid #2d2d2d;
+        border-radius: 10px;
+        width: 95%;
+        padding: 10px;
+        text-align: center;
+        font-size: 16px; /* 調整您希望的字體大小 */
+        max-height: 100px; /* 避免自動放大影響佈局 */
+        -ms-text-size-adjust: 100%; /* IE 11 支援 */
+        -webkit-text-size-adjust: 100%; /* WebKit 支援，如 Safari */
+      }
+      .center {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <h1>16分鐘打字測驗</h1>
+      <p class="text-line">
+        每行最後一字都是完全對齊的，此部分需自行按「。」進行換行。
+        <br />
+        請注意若有漏字及多打都將造成後續所有字元被視為錯字。
+        <br />
+        每個標點符號皆為全形。
+      </p>
+    </div>
+    <div id="center">
+      <div id="textToType"></div>
+      <div id="inputContainer"></div>
+      <button id="startButton" onclick="startGame()">開始測驗</button>
+      <button id="endButton" onclick="endGame()" disabled>結束測驗</button>
+      <button id="restartButton" onclick="restartGame()" disabled>
+        重新開始
+      </button>
+      <button id="downloadButton" onclick="downloadExcel()">
+        下載歷史紀錄
+      </button>
+
+      <p id="timerText" style="display: none">
+        倒計時：<span id="timer">960</span> 秒
+      </p>
+      <p id="userInputCountText" style="display: none">
+        輸入總字數：<span id="userInputCount">0</span>
+      </p>
+      <p id="correctCountText" style="display: none">
+        答對字數：<span id="correctCount">0</span>
+      </p>
+      <p id="incorrectCountText" style="display: none">
+        輸入錯誤字數：<span id="incorrectCount">0</span>
+      </p>
+      <p id="accuracyText" style="display: none">
+        正確率：<span id="accuracy">0%</span>
+      </p>
+      <p id="typingSpeedText" style="display: none">
+        打字速度：<span id="typingSpeed">0</span> 字/分鐘
+      </p>
+      <p id="completionTimeText" style="display: none">
+        完成時間：<span id="completionTime">0</span> 秒
+      </p>
+
+      <div id="recordsContainer" style="display: none">
+        <h2>過去測驗紀錄</h2>
+        <ul id="recordsList"></ul>
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+
+    <script>
+      var textLines = [
+        "糖是一種毒素的說法是取決於人。",
+        "體從不同類型的糖獲得能量的細。",
+        "節現今美國人臺灣人也一樣主要。",
+        "以兩種形式吃糖蔗糖和高果糖玉。",
+        "米糖漿蔗糖是由一個葡萄糖分子。",
+        "和一個果糖分子組成的雙糖在二。",
+        "十世紀六零年代新的技術使美國。",
+        "玉米產業可以以低廉的成本將來。",
+        "自玉米的葡萄糖轉換為果糖生產。",
+        "高果糖玉米糖漿雖然它的名字叫。",
+        "做高果糖玉米糖漿但是果糖和葡。",
+        "萄糖的比例幾乎是相等的它含有。",
+        "五十五趴果糖四十二趴葡萄糖和。",
+        "百分之三其他糖類由於果糖的甜。",
+        "度是葡萄糖的兩倍左右作為一種。",
+        "廉價的糖漿用來取代從甘蔗和甜。",
+        "菜而來的蔗糖對廠商來說是非常。",
+        "有吸引力的無論我們吃的糖來自。",
+        "哪裡我們的細胞會優先使用果糖。",
+        "和葡萄糖而不是較大的蔗糖腸道。",
+        "內的酶在幾秒鐘內就會把蔗糖分。",
+        "割成葡萄糖和果糖所以對人體而。",
+        "言蔗糖與高果糖玉米糖漿是一樣。",
+        "的但是對於其組成分子卻不盡然。",
+        "如此葡萄糖通過血液運輸到我們。",
+        "全身的組織因為所有的細胞都能。",
+        "將葡萄糖轉化為能量相比之下只。",
+        "有肝細胞以及極少數的其他細胞。",
+        "可以將果糖轉化為能量也就是說。",
+        "果糖代謝幾乎完全靠肝臟負責肝。",
+        "臟主要是將果糖轉化成葡萄糖和。",
+        "乳酸吃太多果糖會對肝臟造成負。",
+        "擔肝臟要花許多的精力轉化果糖。",
+        "造成其他功能無法執行產生尿酸。",
+        "造成痛風腎結石和高血壓人體嚴。",
+        "格調節在血液中的葡萄糖俗稱血。",
+        "糖濃度葡萄糖刺激胰臟中的胰腺。",
+        "分泌胰島素這有助於從血液中移。",
+        "除多餘的葡萄糖並刺激瘦體素產。",
+        "生從而抑制飢餓感果糖不會刺激。",
+        "胰島素分泌而且還會提高的產生。",
+        "使我們更飢餓一些研究人員認為。",
+        "吃太多果糖會使人們吃的比他們。",
+        "實際需要的更多由加州大學戴維。",
+        "斯分校的研究顯示吃太多果糖造。",
+        "成脂肪生產增加尤其在肝臟血液。",
+        "中的三酸甘油酯升高這些都是動。",
+        "脈堵塞和心血管疾病的危險因子。",
+        "有些研究發現脂肪肝與胰島素阻。",
+        "抗有關胰島素阻抗是細胞對胰島。",
+        "素的反應比平常低造成胰腺需要。",
+        "製造更多的胰島素直到它失去正。",
+        "確調節血糖的能力科羅拉多大學。",
+        "丹佛分校的認為果糖代謝產生的。",
+        "尿酸也促進了胰島素阻抗而胰島。",
+        "素阻抗也被認為是導致肥胖和第。",
+        "二型糖尿病的主要因子這三種疾。",
+        "病常常一起出現然而都不吃糖也。",
+        "不是什麼靈丹妙藥筆者按完全避。",
+        "免糖份的飲食其實不可能因為蔬。",
+        "菜水果裡面含有糖份肉類裡面有。",
+        "肝醣飲食中糖份太低對身體是有。",
+        "害的因為我們的身體優先利用醣。",
+        "類其次是脂肪再其次才是蛋白質。",
+        "都不吃糖會使得身體燃燒脂肪與。",
+        "蛋白質有導致酮酸中毒的風險健。",
+        "康的飲食並不是只有拒絕第二塊。",
+        "方糖或是把餅乾藏在櫃子裡不吃。",
+        "我們要怎麼處理我們的飲食中所。",
+        "有多餘的脂肪很多都是搭配著糖。",
+        "呢壞的膽固醇和鹽又要怎麼處理。",
+        "如果有人越來越胖糖的攝取是一。",
+        "定要減少的但不要以為減少糖份。",
+        "的攝取後我們就會成功減肥肥胖。",
+        "比這複雜多了在臨床上的確有人。",
+        "是因為喝太多汽水和飲料發胖但。",
+        "大多數人都只是吃太多然後還要。",
+        "吃更多的雜糧水果和蔬菜魚瘦肉。",
+        "但是均衡飲食只是健康的生活方。",
+        "式的一部分我們需要運動來鍛練。",
+        "我們的心臟加強我們的肌肉和骨。",
+        "骼並保持靈活運動少吃加工食品。",
+        "聽起來太簡單了但比在我們的飲。",
+        "食中醜化單個分子來說是一個更。",
+        "加細緻入微的方法美國人從一九。",
+        "七零年和兩千年之間每年每天多。",
+        "攝取五百三十卡路里的同時體力。",
+        "活動也越來越少真理是大部分的。",
+        "人都應該努力吃少一點糖但如果。",
+        "我們真正致力於保持健康我們還。",
+        "要做更多。",
+      ];
+
+      var currentLine = 0;
+      var userInputContainers = [];
+      var textToType = textLines.join("");
+      var startButton = document.getElementById("startButton");
+      var endButton = document.getElementById("endButton");
+      var restartButton = document.getElementById("restartButton");
+      var accuracyElement = document.getElementById("accuracy");
+      var typingSpeedElement = document.getElementById("typingSpeed");
+      var timerElement = document.getElementById("timer");
+      var correctCountElement = document.getElementById("correctCount");
+      var userInputCountElement = document.getElementById("userInputCount");
+      var incorrectCountElement = document.getElementById("incorrectCount");
+      var completionTimeElement = document.getElementById("completionTime");
+      var timerInterval;
+      var initialTimer = 960;
+      var startTime;
+      var totalCharactersTyped = 0;
+      var correctCharactersTyped = 0;
+      var incorrectCharactersTyped = 0;
+      var gameStarted = false;
+      var totalIncorrectCount = 0;
+      var previousLineCorrectText = "";
+
+      function startGame() {
+        if (gameStarted) return;
+
+        gameStarted = true;
+        startButton.disabled = true;
+        endButton.disabled = false;
+        restartButton.disabled = true;
+
+        document.getElementById("timerText").style.display = "block";
+
+        timerElement.textContent = initialTimer;
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+
+        renderCurrentLine();
+      }
+
+      function renderCurrentLine() {
+        var currentText = textLines[currentLine];
+        var lineContainer = document.createElement("div");
+        var textToShow = document.createElement("p");
+        var inputElement = document.createElement("input");
+
+        lineContainer.classList.add("input-line");
+        lineContainer.style.flexDirection = "column"; // 將 flex 排列改為 column
+        inputElement.setAttribute("type", "text");
+        inputElement.setAttribute("placeholder", "在這裡輸入文字");
+        inputElement.addEventListener("input", handleInputChange);
+
+        textToShow.textContent = currentText;
+        lineContainer.appendChild(textToShow);
+        lineContainer.appendChild(inputElement);
+        inputContainer.appendChild(lineContainer);
+
+        userInputContainers[currentLine] = inputElement;
+      }
+
+      function handleInputChange() {
+        var inputText = userInputContainers[currentLine].value;
+        var correctText = textLines[currentLine];
+
+        var lineContainer = userInputContainers[currentLine].parentElement;
+
+        // 如果是新的行，重置錯誤計數
+        if (correctText !== previousLineCorrectText) {
+          previousLineCorrectText = correctText;
+          totalIncorrectCount -= incorrectCharactersTyped;
+          incorrectCharactersTyped = 0;
+        }
+
+        for (var i = 0; i < inputText.length; i++) {
+          var charSpan = lineContainer.children[i].nextSibling;
+          if (!charSpan) break;
+
+          if (inputText[i] === correctText[i]) {
+            charSpan.classList.remove("incorrect");
+          } else {
+            charSpan.classList.add("incorrect");
+            incorrectCharactersTyped++;
+          }
+        }
+
+        // 檢查是否達到換行條件
+        if (inputText.endsWith("。")) {
+          previousLineCorrectText = correctText;
+          totalIncorrectCount += incorrectCharactersTyped;
+          incorrectCharactersTyped = 0;
+          currentLine++;
+
+          if (currentLine < textLines.length) {
+            renderCurrentLine();
+            scrollToNextLine(); // Scroll to the next line
+          } else {
+            endGame();
+          }
+        }
+
+        updateStatistics();
+      }
+
+      function updateTimer() {
+        var currentTime = Date.now();
+        var elapsedTime = Math.floor((currentTime - startTime) / 1000);
+        var remainingTime = Math.max(initialTimer - elapsedTime, 0);
+        var completionTime = initialTimer - remainingTime;
+
+        if (remainingTime === 0) {
+          clearInterval(timerInterval);
+          disableInputs();
+          endButton.disabled = true;
+          restartButton.disabled = false;
+
+          // Call endGame() to handle ending the game and displaying results
+          endGame();
+        }
+
+        timerElement.textContent = remainingTime;
+        completionTimeElement.textContent = completionTime;
+        updateStatistics();
+      }
+
+      function updateStatistics() {
+        var totalCharacters = textToType.length;
+        var inputText = userInputContainers
+          .map(function (input) {
+            return input.value;
+          })
+          .join("");
+        var correctText = textToType.slice(0, inputText.length);
+
+        totalCharactersTyped = inputText.length;
+        correctCharactersTyped = 0;
+        incorrectCharactersTyped = 0;
+
+        for (var i = 0; i < totalCharactersTyped; i++) {
+          if (inputText[i] === correctText[i]) {
+            correctCharactersTyped++;
+          } else {
+            incorrectCharactersTyped++;
+          }
+        }
+
+        var accuracy = (correctCharactersTyped / totalCharactersTyped) * 100; // 修改這裡的計算公式
+        var elapsedTimeInMinutes =
+          (initialTimer - parseInt(timerElement.textContent)) / 60;
+        var typingSpeed = totalCharactersTyped / elapsedTimeInMinutes;
+
+        accuracyElement.textContent = accuracy.toFixed(2) + "%";
+        typingSpeedElement.textContent = typingSpeed.toFixed(2);
+        correctCountElement.textContent = correctCharactersTyped;
+        userInputCountElement.textContent = totalCharactersTyped;
+        incorrectCountElement.textContent = incorrectCharactersTyped;
+      }
+
+      function pauseGame() {
+        clearInterval(timerInterval);
+        disableInputs();
+        pauseButton.disabled = true;
+        resumeButton.disabled = false;
+      }
+
+      function resumeGame() {
+        startTime =
+          Date.now() -
+          (initialTimer - parseInt(timerElement.textContent)) * 1000;
+        timerInterval = setInterval(updateTimer, 1000);
+        enableInputs();
+        pauseButton.disabled = false;
+        resumeButton.disabled = true;
+        focusCurrentInput();
+      }
+
+      function endGame() {
+        clearInterval(timerInterval);
+        disableInputs();
+        endButton.disabled = true;
+        restartButton.disabled = false;
+        updateStatistics();
+        markIncorrectCharacters();
+        displayGameStatistics(); // Display statistics even when the game ends
+        document.getElementById("recordsContainer").style.display = "block";
+        updateRecords();
+      }
+      function displayGameStatistics() {
+        document.getElementById("userInputCountText").style.display = "block";
+        document.getElementById("completionTimeText").style.display = "block";
+        document.getElementById("incorrectCountText").style.display = "block";
+        document.getElementById("accuracyText").style.display = "block";
+        document.getElementById("typingSpeedText").style.display = "block";
+        document.getElementById("correctCountText").style.display = "block";
+        document.getElementById("timerText").style.display = "none"; // Hide timer
+      }
+
+      function markIncorrectCharacters() {
+        for (var i = 0; i < userInputContainers.length; i++) {
+          var inputText = userInputContainers[i].value;
+          var correctText = textLines[i];
+          var lineContainer = userInputContainers[i].parentElement;
+
+          for (var j = 0; j < inputText.length; j++) {
+            if (inputText[j] !== correctText[j]) {
+              var incorrectChar = document.createElement("span");
+              incorrectChar.textContent = inputText[j];
+              incorrectChar.classList.add("incorrect");
+              lineContainer.insertBefore(
+                incorrectChar,
+                lineContainer.children[j + 1]
+              );
+            }
+          }
+        }
+      }
+
+      function updateRecords() {
+        var recordsList = document.getElementById("recordsList");
+        var recordEntry = document.createElement("li");
+        var testIndex = recordsList.children.length + 1;
+
+        recordEntry.innerHTML =
+          "第" +
+          testIndex +
+          "次" +
+          "測驗 " +
+          "<br>" +
+          "輸入總字數：" +
+          userInputCountElement.textContent +
+          "，答對字數：" +
+          correctCountElement.textContent +
+          "，輸入錯誤字數：" +
+          incorrectCountElement.textContent +
+          "<br>" +
+          "正確率：" +
+          accuracyElement.textContent +
+          "，打字速度：" +
+          typingSpeedElement.textContent +
+          " 字/分鐘" +
+          "，完成時間：" +
+          completionTimeElement.textContent +
+          " 秒";
+
+        recordsList.appendChild(recordEntry);
+      }
+      function restartGame() {
+        clearInputs();
+        accuracyElement.textContent = "0%";
+        typingSpeedElement.textContent = "0";
+        timerElement.textContent = "900";
+        completionTimeElement.textContent = "0";
+        correctCountElement.textContent = "0";
+        userInputCountElement.textContent = "0";
+        incorrectCountElement.textContent = "0";
+        startButton.disabled = false;
+        endButton.disabled = true;
+        restartButton.disabled = true;
+        currentLine = 0;
+        clearInterval(timerInterval);
+
+        document.getElementById("accuracyText").style.display = "none";
+        document.getElementById("typingSpeedText").style.display = "none";
+        document.getElementById("completionTimeText").style.display = "none";
+        document.getElementById("correctCountText").style.display = "none";
+        document.getElementById("userInputCountText").style.display = "none";
+        document.getElementById("incorrectCountText").style.display = "none";
+        document.getElementById("timerText").style.display = "none";
+
+        // Clear previous text and input boxes
+        var inputContainer = document.getElementById("inputContainer");
+        while (inputContainer.firstChild) {
+          inputContainer.removeChild(inputContainer.firstChild);
+        }
+
+        gameStarted = false;
+      }
+
+      function scrollToNextLine() {
+        if (currentLine > 0) {
+          // Get the container of the previous input
+          var prevLineContainer =
+            userInputContainers[currentLine - 1].parentElement;
+
+          // Get the container of the current input
+          var currentLineContainer =
+            userInputContainers[currentLine].parentElement;
+
+          // Scroll the current line container into view
+          currentLineContainer.scrollIntoView({
+            behavior: "smooth", // You can change this to "auto" for instant scrolling
+            block: "start",
+          });
+        }
+      }
+
+      // Rest of your
+
+      function disableInputs() {
+        userInputContainers.forEach(function (input) {
+          input.disabled = true;
+        });
+      }
+
+      function enableInputs() {
+        userInputContainers.forEach(function (input) {
+          input.disabled = false;
+        });
+      }
+
+      function clearInputs() {
+        userInputContainers.forEach(function (input) {
+          input.value = "";
+        });
+      }
+
+      function downloadExcel() {
+        var recordsList = document.getElementById("recordsList").children;
+        var workbook = XLSX.utils.book_new();
+        var worksheetData = [["測驗結果"]];
+
+        // Create worksheet data
+        for (var i = 0; i < recordsList.length; i++) {
+          var recordText = recordsList[i].textContent.replace(/\n/g, " ");
+          var rowData = recordText.split(",");
+          worksheetData.push(rowData);
+        }
+
+        var worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        XLSX.utils.book_append_sheet(workbook, worksheet, "TypingTestRecords");
+
+        // Create a Blob with the Excel content
+        var blob = new Blob(
+          [s2ab(XLSX.write(workbook, { bookType: "xlsx", type: "binary" }))],
+          {
+            type: "application/octet-stream",
+          }
+        );
+
+        // Create a download link
+        var link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "typing_test_records.xlsx";
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+
+        // Clean up the link element
+        document.body.removeChild(link);
+      }
+
+      function s2ab(s) {
+        var buf = new ArrayBuffer(s.length);
+        var view = new Uint8Array(buf);
+        for (var i = 0; i != s.length; ++i) view[i] = s.charCodeAt(i) & 0xff;
+        return buf;
+      }
+
+      function focusCurrentInput() {
+        if (userInputContainers[currentLine]) {
+          userInputContainers[currentLine].focus();
+        }
+      }
+
+      // 當輸入框獲取焦點時，阻止手機瀏覽器自動放大
+      userInputContainers.forEach(function (input) {
+        input.addEventListener("focus", function () {
+          var viewport = document.querySelector("meta[name=viewport]");
+          viewport.content =
+            "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0";
+        });
+
+        input.addEventListener("blur", function () {
+          var viewport = document.querySelector("meta[name=viewport]");
+          viewport.content = "width=device-width, initial-scale=1";
+        });
+      });
+    </script>
+  </body>
+</html>
