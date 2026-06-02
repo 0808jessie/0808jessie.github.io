@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AI 互動虛擬展廳</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+        background: radial-gradient(
+          circle at top,
+          #16213e 0%,
+          #0b1628 45%,
+          #02050b 100%
+        );
+        color: #f3f4f8;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+      .page-wrap {
+        width: 100%;
+        max-width: 1200px;
+      }
+      h1 {
+        text-align: center;
+        margin: 0 0 6px;
+        font-size: clamp(2rem, 3vw, 3rem);
+      }
+      .subtitle {
+        text-align: center;
+        margin: 0 0 30px;
+        color: #aac5e4;
+      }
+      .exhibit {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1.1 / 1;
+        min-height: 680px;
+      }
+      .ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.08),
+          0 0 120px rgba(0, 255, 255, 0.08);
+      }
+      .art-piece {
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        border-radius: 24px;
+        overflow: hidden;
+        backdrop-filter: blur(4px);
+        border: 2px solid rgba(255, 255, 255, 0.06);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        transition:
+          transform 0.25s ease,
+          box-shadow 0.25s ease,
+          border-color 0.25s ease;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .art-piece:hover {
+        transform: scale(1.08);
+        border-color: rgba(51, 186, 255, 0.8);
+        box-shadow: 0 28px 70px rgba(0, 183, 255, 0.18);
+      }
+      .art-piece img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .label {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 10px 12px;
+        background: linear-gradient(
+          180deg,
+          transparent 0%,
+          rgba(0, 0, 0, 0.72) 100%
+        );
+        color: #f7fbff;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-align: center;
+      }
+      .center-panel {
+        position: absolute;
+        inset: calc(50% - 220px);
+        width: 440px;
+        height: 440px;
+        border-radius: 38px;
+        background: rgba(9, 21, 41, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+        padding: 26px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .center-panel h2 {
+        margin: 0;
+        font-size: 1.9rem;
+        letter-spacing: 0.03em;
+      }
+      .info-box {
+        flex: 1;
+        overflow-y: auto;
+        margin: 20px 0;
+        padding: 18px 16px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #e3edf9;
+        line-height: 1.75;
+        font-size: 0.98rem;
+      }
+      .info-box p {
+        margin: 0 0 0.85rem;
+      }
+      .chat-area {
+        display: flex;
+        gap: 12px;
+      }
+      .chat-area input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        border-radius: 999px;
+        padding: 14px 18px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #f1f7ff;
+      }
+      .chat-area input:focus {
+        outline: 1px solid rgba(51, 186, 255, 0.7);
+      }
+      .chat-area button {
+        border: none;
+        border-radius: 999px;
+        padding: 14px 20px;
+        background: #22a8ff;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+      .chat-area button:hover {
+        background: #1c8bd3;
+      }
+      .message {
+        margin: 0.8rem 0;
+        padding: 14px 16px;
+        border-radius: 20px;
+        max-width: 95%;
+        line-height: 1.6;
+      }
+      .message.bot {
+        background: rgba(38, 104, 170, 0.18);
+        color: #e9f5ff;
+      }
+      .message.user {
+        align-self: flex-end;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f7fbff;
+      }
+      @media (max-width: 980px) {
+        .exhibit {
+          aspect-ratio: auto;
+          min-height: 920px;
+        }
+        .center-panel {
+          position: relative;
+          inset: auto;
+          width: auto;
+          height: auto;
+          margin: 0 auto 30px;
+        }
+        .art-piece {
+          width: 125px;
+          height: 125px;
+        }
+      }
+      @media (max-width: 720px) {
+        body {
+          padding: 12px;
+        }
+        .center-panel {
+          width: 100%;
+          padding: 20px;
+        }
+        .chat-area {
+          flex-direction: column;
+        }
+        .chat-area button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-wrap">
+      <h1>AI 虛擬展廳</h1>
+      <p class="subtitle">
+        點選畫作環繞展出，與 AI
+        導覽員互動；介紹畫作、推薦其他作品、聊天探索更多展品。
+      </p>
+
+      <div class="exhibit">
+        <div class="ring"></div>
+
+        <div
+          class="art-piece"
+          style="top: 9%; left: 50%; transform: translate(-50%, 0)"
+          data-title="午夜花園"
+          data-desc="這幅作品以深藍與紫色交織出靜謐夜景，像是一座秘密花園，讓人沈浸於神祕與寧靜之中。"
+        >
+          <img src="pic/1.png" alt="午夜花園" />
+          <div class="label">午夜花園</div>
+        </div>
+
+        <div
+          class="art-piece"
+          style="top: 26%; right: 7%; transform: translate(0, -50%)"
+          data-title="晨光夢境"
+          data-desc="晨光中的柔和色調，透過光與影的交錯，描繪出如夢似幻的希望與溫柔。"
+        >
+          <img src="pic/2.png" alt="晨光夢境" />
+          <div class="label">晨光夢境</div>
+        </div>
+
+        <div
+          class="art-piece"
+          style="bottom: 18%; right: 18%; transform: translate(0, 0)"
+          data-title="秋日故事"
+          data-desc="暖橘與棕紅營造出秋天的詩意，畫面猶如一封季節的書信，細語著歲月的溫度。"
+        >
+          <img src="pic/3.png" alt="秋日故事" />
+          <div class="label">秋日故事</div>
+        </div>
+
+        <div
+          class="art-piece"
+          style="bottom: 10%; left: 50%; transform: translate(-50%, 0)"
+          data-title="海邊奏鳴"
+          data-desc="海浪的節奏在畫面中流動，藍綠色調與線條交織出如音符般的海岸旋律。"
+        >
+          <img src="pic/4.png" alt="海邊奏鳴" />
+          <div class="label">海邊奏鳴</div>
+        </div>
+
+        <div
+          class="art-piece"
+          style="top: 26%; left: 7%; transform: translate(0, -50%)"
+          data-title="城市光影"
+          data-desc="霓虹與鋼鐵線條交錯出城市夜晚的節奏，帶出繁華與孤寂交織的光影故事。"
+        >
+          <img src="pic/5.png" alt="城市光影" />
+          <div class="label">城市光影</div>
+        </div>
+
+        <div class="center-panel">
+          <h2 id="panel-title">歡迎來到展廳</h2>
+          <div class="info-box" id="panel-description">
+            <p>
+              在這個環繞展廳中，點選任何一幅畫作，AI
+              導覽員會立即介紹它，並可以與你聊其他作品。
+            </p>
+          </div>
+          <div class="chat-area">
+            <input
+              id="user-input"
+              type="text"
+              placeholder="試著問：這幅畫的風格？或推薦其他畫作。"
+            />
+            <button id="send-btn">發送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const paintings = document.querySelectorAll(".art-piece");
+      const panelTitle = document.getElementById("panel-title");
+      const panelDescription = document.getElementById("panel-description");
+      const userInput = document.getElementById("user-input");
+      const sendBtn = document.getElementById("send-btn");
+
+      const chatLog = document.createElement("div");
+      chatLog.style.display = "flex";
+      chatLog.style.flexDirection = "column";
+      chatLog.style.gap = "0.65rem";
+      chatLog.style.marginBottom = "1rem";
+      panelDescription.prepend(chatLog);
+
+      const infoByTitle = {
+        午夜花園:
+          "夜色中閃爍著祕密花園的光線，色彩流動如夢，讓人沈浸於寧靜與神祕。",
+        晨光夢境: "清晨的光暈柔和、氣氛輕盈，宛如剛從夢中醒來的希望與溫暖。",
+        秋日故事: "金黃與棕紅營造出秋天的詩意，畫面像是一封溫柔的季節信件。",
+        海邊奏鳴: "海浪節奏透過線條延展，藍綠色彩讓人感受海風在耳邊低語。",
+        城市光影: "都市風貌與霓虹光影交錯，引導你探索城市裡無聲的故事。",
+      };
+
+      const suggestionByTitle = {
+        午夜花園: "如果你喜歡神秘氛圍，可以試試「城市光影」的夜間光影表現。",
+        晨光夢境: "你也許會喜歡「秋日故事」的柔和色調與溫暖情緒。",
+        秋日故事: "「海邊奏鳴」同樣有溫潤的節奏感，很適合接著欣賞。",
+        海邊奏鳴: "想要更多都市感的作品，可以看看「城市光影」。",
+        城市光影: "若想換成自然風景類型，不妨試試「晨光夢境」。",
+      };
+
+      let currentTitle = "";
+
+      function appendMessage(text, sender) {
+        const msg = document.createElement("div");
+        msg.className = `message ${sender}`;
+        msg.textContent = text;
+        chatLog.appendChild(msg);
+        panelDescription.scrollTop = panelDescription.scrollHeight;
+      }
+
+      paintings.forEach((painting) => {
+        painting.addEventListener("click", () => {
+          currentTitle = painting.dataset.title;
+          const desc = painting.dataset.desc;
+          panelTitle.textContent = currentTitle;
+          panelDescription.innerHTML = "";
+          panelDescription.appendChild(chatLog);
+          appendMessage(`您選擇了「${currentTitle}」。`, "bot");
+          appendMessage(desc, "bot");
+          appendMessage(
+            "想知道這幅畫的風格、創作靈感，或要我推薦其他作品嗎？",
+            "bot",
+          );
+        });
+      });
+
+      function getResponse(question) {
+        const text = question.trim().toLowerCase();
+        if (!currentTitle) {
+          return "請先點選一幅畫，我會先介紹這幅作品，再與你聊其他作品。";
+        }
+        if (
+          text.includes("這幅") ||
+          text.includes("風格") ||
+          text.includes("靈感") ||
+          text.includes("介紹")
+        ) {
+          return (
+            infoByTitle[currentTitle] ||
+            "這幅作品值得細細品味，每一次觀看都會有新的感受。"
+          );
+        }
+        if (
+          text.includes("其他") ||
+          text.includes("推薦") ||
+          text.includes("還有") ||
+          text.includes("哪一")
+        ) {
+          return (
+            suggestionByTitle[currentTitle] ||
+            "我可以推薦你看看其他作品，每一幅都有自己的故事。"
+          );
+        }
+        if (
+          text.includes("你") ||
+          text.includes("可以") ||
+          text.includes("聊")
+        ) {
+          return "當然可以！我可以介紹畫作、比較風格，也可以帶你探索不同展品。";
+        }
+        return "這是一個很好的問題！你想知道更多關於這幅畫或想比較其他畫作嗎？";
+      }
+
+      function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+        appendMessage(text, "user");
+        const response = getResponse(text);
+        setTimeout(() => appendMessage(response, "bot"), 220);
+        userInput.value = "";
+      }
+
+      sendBtn.addEventListener("click", sendMessage);
+      userInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") sendMessage();
+      });
+    </script>
+  </body>
+</html>
