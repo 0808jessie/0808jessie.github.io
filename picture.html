@@ -9,7 +9,13 @@
       body {
         margin: 0;
         padding: 0;
-        background: linear-gradient(to bottom, #111e38 0%, #0a1122 100%);
+        /* 使用 artbg 圖片作為背景，若不存在請放入 pic/artbg.jpg */
+        background-image:
+          linear-gradient(rgba(6, 12, 28, 0.6), rgba(6, 12, 28, 0.6)),
+          url("pic/art.jpg");
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
         height: 100vh;
         overflow: hidden;
         font-family:
@@ -438,7 +444,7 @@
       /* 右側反思面板：預設縮合（右下角），點擊展開顯示內容 */
       .voice-of-arts {
         position: fixed;
-        right: 30px;
+        right: 40px;
         bottom: 30px;
         top: auto;
         width: 90px;
@@ -460,21 +466,21 @@
 
       /* open 類別表示展開 */
       .voice-of-arts.open {
-        right: 0;
+        right: 40px; /* 與 AI 面板對稱 */
         bottom: auto;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 320px;
-        height: auto;
-        max-height: 500px;
-        border-radius: 24px 0 0 24px;
-        padding: 20px;
-        overflow-x: hidden;
-        overflow-y: auto;
+        top: 110px; /* 與 AI 面板同高度位置 */
+        transform: none;
+        width: 360px; /* 與 AI 面板相同 */
+        height: 520px; /* 與 AI 面板相同 */
+        max-height: 520px;
+        border-radius: 28px;
+        padding: 18px;
+        overflow: hidden; /* 外層隱藏，內層捲動 */
         align-items: flex-start;
         justify-content: flex-start;
-        flex-direction: row;
-        flex-wrap: wrap;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.45);
       }
 
       .voice-toggle-btn {
@@ -535,6 +541,9 @@
       #voice-records {
         order: 1;
         width: 100%;
+        overflow-y: auto; /* 讓記錄區可捲動 */
+        flex: 1 1 auto;
+        padding-right: 8px;
       }
 
       .voice-item {
@@ -595,37 +604,37 @@
       <div class="gallery-3d" id="gallery">
         <div class="painting-card" onclick="selectPainting('午夜花園')">
           <div class="card-inner">
-            <img src="pic/1-1.png" alt="午夜花園" />
+            <img src="pic/ait (1).png" alt="午夜花園" />
             <div class="painting-title">午夜花園</div>
           </div>
         </div>
         <div class="painting-card" onclick="selectPainting('晨光夢境')">
           <div class="card-inner">
-            <img src="pic/1-2.png" alt="晨光夢境" />
+            <img src="pic/ait (2).png" alt="晨光夢境" />
             <div class="painting-title">晨光夢境</div>
           </div>
         </div>
         <div class="painting-card" onclick="selectPainting('城市光影')">
           <div class="card-inner">
-            <img src="pic/1-3.png" alt="城市光影" />
+            <img src="pic/ait (3).png" alt="城市光影" />
             <div class="painting-title">城市光影</div>
           </div>
         </div>
         <div class="painting-card" onclick="selectPainting('秋日故事')">
           <div class="card-inner">
-            <img src="pic/2-1.png" alt="秋日故事" />
+            <img src="pic/ait (4).png" alt="秋日故事" />
             <div class="painting-title">秋日故事</div>
           </div>
         </div>
         <div class="painting-card" onclick="selectPainting('海邊奏鳴')">
           <div class="card-inner">
-            <img src="pic/2-2.png" alt="海邊奏鳴" />
+            <img src="pic/ait (5).png" alt="海邊奏鳴" />
             <div class="painting-title">海邊奏鳴</div>
           </div>
         </div>
         <div class="painting-card" onclick="selectPainting('午後微光')">
           <div class="card-inner">
-            <img src="pic/2-3.png" alt="午後微光" />
+            <img src="pic/ait (6).png" alt="午後微光" />
             <div class="painting-title">午後微光</div>
           </div>
         </div>
@@ -696,7 +705,7 @@
 
     <div class="center-welcome">
       <h2>歡迎來到展廳</h2>
-      <p>點擊上方畫作或使用左右箭頭切換</p>
+      <p>點擊畫作或使用左右箭頭切換</p>
     </div>
 
     <script {timestamp="2026-06-02" }>
