@@ -67,6 +67,12 @@
         /* 確保卡片自身可以接收滑鼠事件，即使父容器 pointer-events: none */
       }
 
+      /* 橫式（Landscape）卡片：用於市井風情與南管樂奏 */
+      .painting-card.landscape {
+        width: 250px;
+        height: 100px;
+      }
+
       /* 5. 內層卡片（全卡片解鎖 Hover 放大動畫） */
       .card-inner {
         width: 100%;
@@ -93,7 +99,7 @@
       /* [優化] 不管滑鼠移到哪一幅畫，都能觸發精美的放大特效 */
       .card-inner:hover {
         transform: scale(1.18); /* 放大效果 */
-        box-shadow: 0 20px 45px rgba(0, 123, 255, 0.45); /* 科技藍發光陰影 */
+        box-shadow: 0 20px 45px rgba(223, 102, 21, 0.648); /* 科技藍發光陰影 */
         filter: brightness(1.2); /* 微微變亮增強互動感 */
         z-index: 1000; /* 確保 hover 時置頂，避免被其他元素遮擋 */
       }
@@ -101,7 +107,7 @@
       /* 備援：若滑鼠落在外層 painting-card，內層也啟動同樣效果（避免 transform 導致事件落差） */
       .painting-card:hover .card-inner {
         transform: scale(1.18);
-        box-shadow: 0 20px 45px rgba(0, 123, 255, 0.45);
+        box-shadow: 0 20px 45px rgba(223, 102, 21, 0.648);
         filter: brightness(1.2);
         z-index: 1000;
       }
@@ -120,6 +126,12 @@
         top: 0;
         left: 0;
         z-index: 1;
+      }
+
+      /* 橫式卡片圖片完整顯示 */
+      .painting-card.landscape img {
+        object-fit: contain;
+        /*background: rgba(0, 0, 0, 0.2);*/
       }
 
       /* 畫作名稱文字 */
@@ -178,8 +190,8 @@
         top: 110px;
         width: 360px;
         height: 520px;
-        background: rgba(6, 12, 28, 0.98);
-        border: 1px solid rgba(72, 133, 255, 0.18);
+        background: rgba(255, 141, 131, 0.4);
+        border: 1px solid rgba(255, 141, 131, 0.667);
         backdrop-filter: blur(28px);
         -webkit-backdrop-filter: blur(28px);
         border-radius: 28px;
@@ -195,7 +207,7 @@
 
       .ai-chat-window.collapsed {
         width: 90px;
-        height: 90px;
+        height: 40px;
         min-height: auto;
         padding: 12px;
         border-radius: 22px;
@@ -230,14 +242,14 @@
 
       .chat-subtitle {
         color: rgba(255, 255, 255, 0.65);
-        font-size: 12px;
+        font-size: 14px;
         line-height: 1.5;
       }
 
       .chat-toggle-btn {
         background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.14);
-        color: #e5f3ff;
+        color: #ffffff;
         width: 36px;
         height: 36px;
         border-radius: 12px;
@@ -253,7 +265,7 @@
 
       .chat-toggle-btn:hover {
         background: rgba(255, 255, 255, 0.14);
-        transform: translateY(-1px);
+        transform: translateY(1px);
       }
 
       .chat-panel-body {
@@ -288,14 +300,14 @@
         min-height: 180px;
         max-height: 320px;
         margin: 0;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(203, 96, 96, 0.495);
+        border: 1px solid rgba(203, 96, 96, 0.71);
         border-radius: 18px;
         padding: 18px;
       }
 
       .chat-content em {
-        color: rgba(255, 255, 255, 0.65);
+        color: rgba(203, 96, 96, 0.895);
       }
 
       .chat-input-area {
@@ -315,14 +327,14 @@
 
       .chat-input {
         flex-grow: 1;
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(155, 87, 87, 0.895);
         border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 24px;
+        border-radius: 20px;
         padding: 12px 16px;
         color: #fff;
         font-size: 14px;
         outline: none;
-        min-height: 44px;
+        min-height: 20px;
       }
 
       .chat-input::placeholder {
@@ -330,7 +342,7 @@
       }
 
       .send-btn {
-        background: linear-gradient(135deg, #35a3ff, #1b6efb);
+        background: linear-gradient(135deg, #dc8623, #dda25e);
         color: white;
         border: none;
         padding: 12px 18px;
@@ -358,9 +370,9 @@
       }
 
       .option-btn {
-        background: rgba(29, 161, 242, 0.16);
-        border: 1px solid rgba(29, 161, 242, 0.35);
-        color: #d0e9ff;
+        background: rgba(245, 197, 94, 0.616);
+        border: 1px solid rgba(245, 197, 94, 0.616);
+        color: #f8c4ad;
         padding: 12px 14px;
         border-radius: 16px;
         font-size: 13px;
@@ -373,8 +385,8 @@
       }
 
       .option-btn:hover {
-        background: rgba(29, 161, 242, 0.35);
-        transform: translateY(-1px);
+        background: #f8c4ad81;
+        transform: translateY(1px);
       }
 
       /* 9. 反思保存表單 */
@@ -392,8 +404,8 @@
       }
 
       .reflection-input {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(245, 175, 175, 0.539);
+        border: 1px solid rgba(245, 175, 175, 0.836);
         border-radius: 16px;
         padding: 12px 14px;
         color: #fff;
@@ -404,14 +416,14 @@
       }
 
       .reflection-label {
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(245, 175, 175, 0.836);
         font-size: 12px;
         font-weight: 600;
       }
 
       .reflection-input {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(224, 153, 153, 0.616);
+        border: 1px solid rgba(245, 175, 175, 0.836);
         border-radius: 12px;
         padding: 10px 12px;
         color: #fff;
@@ -421,11 +433,11 @@
       }
 
       .reflection-input::placeholder {
-        color: rgba(255, 255, 255, 0.3);
+        color: rgb(255, 255, 255);
       }
 
       .save-reflection-btn {
-        background: #1da1f2;
+        background: #dc8623;
         color: white;
         border: none;
         padding: 10px 16px;
@@ -437,7 +449,7 @@
       }
 
       .save-reflection-btn:hover {
-        background: #1991db;
+        background: #dc6142;
       }
 
       /* 10. 反思記錄顯示（可縮合面板） */
@@ -448,9 +460,9 @@
         bottom: 30px;
         top: auto;
         width: 90px;
-        height: 90px;
-        background: rgba(10, 18, 36, 0.9);
-        border: 1px solid rgba(29, 161, 242, 0.3);
+        height: 40px;
+        background: rgba(255, 141, 131, 0.4);
+        border: 1px solid rgba(255, 141, 131, 0.667);
         border-radius: 16px;
         padding: 12px;
         overflow: hidden;
@@ -487,7 +499,7 @@
         position: relative;
         left: auto;
         top: auto;
-        background: rgba(29, 161, 242, 0.8);
+        background: rgba(248, 158, 62, 0.8);
         border: none;
         color: #fff;
         width: 36px;
@@ -499,8 +511,8 @@
         align-items: center;
         justify-content: center;
         transition: background 0.2s;
-        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.6);
-        z-index: 100;
+        box-shadow: 0 8px 18px rgba(235, 162, 113, 0.6);
+        z-index: 50;
         flex-shrink: 0;
         order: 0;
       }
@@ -511,7 +523,7 @@
       }
 
       .voice-toggle-btn:hover {
-        background: #1da1f2;
+        background: rgba(248, 158, 62, 0.8);
       }
 
       .voice-header {
@@ -527,8 +539,8 @@
       }
 
       .voice-title {
-        color: #1da1f2;
-        font-size: 14px;
+        color: #ed721b;
+        font-size: 20px;
         font-weight: 700;
         letter-spacing: 1px;
         display: none;
@@ -548,7 +560,7 @@
 
       .voice-item {
         color: rgba(255, 255, 255, 0.75);
-        font-size: 12px;
+        font-size: 14px;
         line-height: 1.6;
         padding: 8px 0;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -565,7 +577,7 @@
 
       .voice-label {
         color: rgba(255, 255, 255, 0.5);
-        font-size: 11px;
+        font-size: 14px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
@@ -590,7 +602,7 @@
       }
 
       .center-welcome p {
-        font-size: 13px;
+        font-size: 24px;
         margin: 0;
         color: rgba(255, 255, 255, 0.75);
       }
@@ -602,40 +614,47 @@
 
     <div class="stage-container">
       <div class="gallery-3d" id="gallery">
-        <div class="painting-card" onclick="selectPainting('午夜花園')">
+        <div class="painting-card" onclick="selectPainting('紅沙發上的裸女')">
           <div class="card-inner">
-            <img src="pic/ait (1).png" alt="午夜花園" />
-            <div class="painting-title">午夜花園</div>
+            <img src="pic/ait (1).png" alt="紅沙發上的裸女" />
+            <div class="painting-title">紅沙發上的裸女</div>
           </div>
         </div>
-        <div class="painting-card" onclick="selectPainting('晨光夢境')">
+        <div class="painting-card" onclick="selectPainting('拉小提琴的女子')">
           <div class="card-inner">
-            <img src="pic/ait (2).png" alt="晨光夢境" />
-            <div class="painting-title">晨光夢境</div>
+            <img src="pic/ait (2).png" alt="拉小提琴的女子" />
+            <div class="painting-title">拉小提琴的女子</div>
           </div>
         </div>
-        <div class="painting-card" onclick="selectPainting('城市光影')">
+        <div
+          class="painting-card landscape"
+          onclick="selectPainting('市井風情')"
+        >
           <div class="card-inner">
-            <img src="pic/ait (3).png" alt="城市光影" />
-            <div class="painting-title">城市光影</div>
+            <img src="pic/ait (5).png" alt="市井風情" />
+            <div class="painting-title">市井風情</div>
           </div>
         </div>
-        <div class="painting-card" onclick="selectPainting('秋日故事')">
+        <div class="painting-card" onclick="selectPainting('夜與裸女')">
           <div class="card-inner">
-            <img src="pic/ait (4).png" alt="秋日故事" />
-            <div class="painting-title">秋日故事</div>
+            <img src="pic/ait (3).png" alt="夜與裸女" />
+            <div class="painting-title">夜與裸女</div>
           </div>
         </div>
-        <div class="painting-card" onclick="selectPainting('海邊奏鳴')">
+        <div class="painting-card" onclick="selectPainting('散步')">
           <div class="card-inner">
-            <img src="pic/ait (5).png" alt="海邊奏鳴" />
-            <div class="painting-title">海邊奏鳴</div>
+            <img src="pic/ait (4).png" alt="散步" />
+            <div class="painting-title">散步</div>
           </div>
         </div>
-        <div class="painting-card" onclick="selectPainting('午後微光')">
+
+        <div
+          class="painting-card landscape"
+          onclick="selectPainting('南管樂奏')"
+        >
           <div class="card-inner">
-            <img src="pic/ait (6).png" alt="午後微光" />
-            <div class="painting-title">午後微光</div>
+            <img src="pic/ait (6).png" alt="南管樂奏" />
+            <div class="painting-title">南管樂奏</div>
           </div>
         </div>
       </div>
@@ -730,18 +749,17 @@
       };
 
       const artDescriptions = {
-        午夜花園:
-          "<br><br>─ 關於作品 ─<br><em style='font-size: 11px; color: rgba(255,255,255,0.65);'>這幅作品以深藍與紫色交織出靜謐夜景，如同一座秘密花園。微妙的光影層次讓你感受到沉靜與神祕。</em>",
-        晨光夢境:
-          "<br><br>─ 關於作品 ─<br><em style='font-size: 11px; color: rgba(255,255,255,0.65);'>溫柔的晨光穿透薄霧，畫面像是從夢中流出的瞬間。光線讓人想起希望與新生。</em>",
-        城市光影:
-          "<br><br>─ 關於作品 ─<br><em style='font-size: 11px; color: rgba(255,255,255,0.65);'>霓虹與建築線條交錯出城市夜晚的節奏。光影之間帶出城市的熱鬧與孤寂感。</em>",
-        秋日故事:
-          "<br><br>─ 關於作品 ─<br><em style='font-size: 11px; color: rgba(255,255,255,0.65);'>金黃的季節色彩溫暖而豐富，畫面像一本秋天的故事書，讓人感受溫柔的時光流動。</em>",
-        海邊奏鳴:
-          "<br><br>─ 關於作品 ─<br><em style='font-size: 11px; color: rgba(255,255,255,0.65);'>海浪節奏在畫面中流動，藍綠色調帶來一種清新與釋放。像是一場輕柔的海邊交響曲。</em>",
-        午後微光:
-          "<br><br>─ 關於作品 ─<br><em style='font-size: 11px; color: rgba(255,255,255,0.65);'>午後的柔光灑落在靜謐場景，畫面有一種短暫而珍貴的寧靜感。</em>",
+        紅沙發上的裸女:
+          "<br><br>─ 關於作品 ─<br><em style='font-size: 14px; color: rgba(255,255,255,0.65);'>這是梁奕焚最具代表性的「黑美人」系列作品之一。畫中女子身軀塗黑，僅以細膩的白線勾勒出五官與豐腴的身體輪廓。她優雅地坐在搶眼的朱紅色大沙發上，下半身圍著帶有白色花朵與綠葉的土黃色草裙，背景則是明亮的綠色植物圖騰，展現出強烈的色彩對比與原始、純粹的女性生命力。</em>",
+        拉小提琴的女子:
+          "<br><br>─ 關於作品 ─<br><em style='font-size: 14px; color: rgba(255,255,255,0.65);'>同樣屬於黑美人系列，畫中女子穿著一件清新藍底、白色花卉圖案的洋裝，坐在紅色木椅上專注地拉著小提琴。背景由溫暖的橙褐色與黑色線條構成繁複的古典花卉壁紙，整幅畫將西方的古典樂器與東方內斂、平面的裝飾美學完美融合，充滿和諧的律動感。</em>",
+        夜與裸女:
+          "<br><br>─ 關於作品 ─<br><em style='font-size: 14px; color: rgba(255,255,255,0.65);'>此作營造出浪漫而神祕的夜間氛圍。一名黑色裸女姿態慵懶地躺在鋪有精緻地毯的地面上，雙腿微微抬起搭在椅子旁。最引人注目的是佔據畫面上半部的大片黑色背景，上面點綴著無數細碎的粉、白、綠色點塊，宛如夜空中繁星點點，又似飄落的滿天花雨，充滿詩意與夢幻色彩。</em>",
+        散步: "<br><br>─ 關於作品 ─<br><em style='font-size: 14px; color: rgba(255,255,255,0.65);'>這是梁奕焚 2023 年較近期的作品，風格更趨向童趣與純樸的素描感。畫面採取黑色背景，主角是一位頭戴藍色頭巾、身穿綠色長袍的側面女子，她身旁伴隨著一隻線條簡單、神情帶點呆萌的白色小狗。人物面部保留了木質般的紋理質感，展現出返璞歸真的藝術趣味。</em>",
+        市井風情:
+          "<br><br>─ 關於作品 ─<br><em style='font-size: 14px; color: rgba(255,255,255,0.65);'>這是一幅橫幅的大型創作，背景是一貫熱烈的梁氏朱紅色。畫面由左至右描繪了台灣早期社會或傳統市井中的手工藝職人：修傘匠、製鞋匠、在貨架旁休憩的女子，以及右側手拿風車的攤販。作品帶有濃厚的鄉土情懷與民俗色彩，記錄了舊時代日常生活的靜謐與質樸。</em>",
+        南管樂奏:
+          "<br><br>─ 關於作品 ─<br><em style='font-size: 14px; color: rgba(255,255,255,0.65);'>這幅同樣是經典的紅色橫幅大作，主題聚焦於台灣傳統音樂「南管」的演奏場景。四位樂師各持不同的傳統樂器（如琵琶、三弦、月琴等）專注彈奏，每個人身上的服飾花紋（黃底碎花、藍底白花、黑底紫袖等）都經過精心的裝飾性設計。畫家巧妙地運用色塊與線條，將傳統音樂的優雅視覺化，散發出優雅的古典台味。</em>",
       };
 
       function setChat(message, append = false) {
