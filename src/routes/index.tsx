@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
+import { GoogleGenAI } from "@google/genai";
 import { toast } from "sonner";
 import {
   Archive,
@@ -52,7 +53,25 @@ type HistoryEntry = {
 };
 
 const STORAGE_KEY = "decide-now-history";
+const GEMINI_KEY_STORAGE_KEY = "decide-now-gemini-key";
 const MAX_LEN = 50;
+
+type GeminiDecisionPayload = {
+  analysis: {
+    blindspot: string;
+    weightCheck: string;
+    nextStep: string;
+  };
+  suggestions: {
+    pros: Array<{ text: string; weight: number }>;
+    cons: Array<{ text: string; weight: number }>;
+  };
+  ice: {
+    impact: number;
+    confidence: number;
+    ease: number;
+  };
+};
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -123,6 +142,55 @@ function analyze(topic: string): Analysis {
   };
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function parseGeminiPayload(rawText: string | undefined): GeminiDecisionPayload {
+  if (!rawText) {
+    throw new Error("Gemini 沒有回傳任何內容。");
+  }
+
+  const cleaned = rawText
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
+
+  const parsed = JSON.parse(cleaned) as Partial<GeminiDecisionPayload>;
+  const analysis = parsed.analysis as Partial<GeminiDecisionPayload["analysis"]> | undefined;
+  const suggestions = parsed.suggestions as
+    | Partial<GeminiDecisionPayload["suggestions"]>
+    | undefined;
+  const ice = parsed.ice as Partial<GeminiDecisionPayload["ice"]> | undefined;
+
+  return {
+    analysis: {
+      blindspot: typeof analysis?.blindspot === "string" ? analysis.blindspot : "",
+      weightCheck: typeof analysis?.weightCheck === "string" ? analysis.weightCheck : "",
+      nextStep: typeof analysis?.nextStep === "string" ? analysis.nextStep : "",
+    },
+    suggestions: {
+      pros: Array.isArray(suggestions?.pros)
+        ? suggestions.pros.filter(
+            (item): item is { text: string; weight: number } =>
+              !!item && typeof item.text === "string" && typeof item.weight === "number",
+          )
+        : [],
+      cons: Array.isArray(suggestions?.cons)
+        ? suggestions.cons.filter(
+            (item): item is { text: string; weight: number } =>
+              !!item && typeof item.text === "string" && typeof item.weight === "number",
+          )
+        : [],
+    },
+    ice: {
+      impact: typeof ice?.impact === "number" ? clamp(ice.impact, 1, 10) : 5,
+      confidence: typeof ice?.confidence === "number" ? clamp(ice.confidence, 1, 10) : 5,
+      ease: typeof ice?.ease === "number" ? clamp(ice.ease, 1, 10) : 5,
+    },
+  };
+}
+
 export function DecideNow() {
   const [draft, setDraft] = useState("");
   const [topic, setTopic] = useState<string | null>(null);
@@ -136,6 +204,11 @@ export function DecideNow() {
     confidence: 5,
     ease: 5,
   });
+  const [apiKeyInput, setApiKeyInput] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem(GEMINI_KEY_STORAGE_KEY) ?? "";
+  });
+  const envApiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim() ?? "";
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
@@ -152,6 +225,11 @@ export function DecideNow() {
       window.localStorage.removeItem(STORAGE_KEY);
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(GEMINI_KEY_STORAGE_KEY, apiKeyInput);
+  }, [apiKeyInput]);
 
   const currentIceScore = ice.impact * ice.confidence * ice.ease;
   const activeQuestion = topic ?? draft;
@@ -290,18 +368,122 @@ export function DecideNow() {
 
   const canAnalyze = !!topic && pros.some((i) => i.text.trim()) && cons.some((i) => i.text.trim());
 
-  const runAnalysis = () => {
-    if (!canAnalyze) {
+  const runAnalysis = async () => {
+    if (!canAnalyze || !topic) {
       toast.error("請至少各輸入一項優缺點，才能進行盲點分析。");
       return;
     }
+
+    const key = apiKeyInput.trim() || envApiKey;
+    if (!key) {
+      toast.error("請先輸入 Gemini API Key，或在部署環境中設定 VITE_GEMINI_API_KEY。", {
+        description: "分析按鈕會直接請 Gemini 生成結構化建議與 ICE 評估。",
+      });
+      return;
+    }
+
     setLoading(true);
     setAnalysis(null);
     setFeedback(null);
-    setTimeout(() => {
-      setAnalysis(analyze(topic!));
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: key });
+      const prompt = `你是決策教練。請針對以下決策命題與目前已整理的利弊，產出一份結構化 JSON。要求：
+1. 只輸出 JSON，不要任何額外文字。
+2. 內容必須是以下格式：
+{
+  "analysis": {
+    "blindspot": "...",
+    "weightCheck": "...",
+    "nextStep": "..."
+  },
+  "suggestions": {
+    "pros": [{"text": "...", "weight": 2}],
+    "cons": [{"text": "...", "weight": 2}]
+  },
+  "ice": {"impact": 1, "confidence": 1, "ease": 1}
+}
+3. analysis 的內容要針對中文決策情境，提供可執行的盲點、權重校正與替代方案。
+4. suggestions 的每一項都要是具體、能直接加入決策矩陣的因子，且權重請用 1 到 5 的整數。
+5. ice 的分數要用 1 到 10 的整數，反映這個決策在實際執行時的可行性。
+
+決策命題：${topic}
+
+目前優點：${
+        pros
+          .filter((item) => item.text.trim())
+          .map((item) => `${item.text} (權重 ${item.weight})`)
+          .join("；") || "無"
+      }
+
+目前缺點：${
+        cons
+          .filter((item) => item.text.trim())
+          .map((item) => `${item.text} (權重 ${item.weight})`)
+          .join("；") || "無"
+      }`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          temperature: 0.35,
+          responseMimeType: "application/json",
+        },
+      });
+
+      const payload = parseGeminiPayload(response.text);
+      setAnalysis(payload.analysis);
+
+      setPros((prev) => {
+        const seen = new Set(prev.map((item) => item.text.trim().toLowerCase()));
+        const next = [...prev];
+        payload.suggestions.pros.forEach((item) => {
+          const normalized = item.text.trim();
+          if (!normalized) return;
+          const key = normalized.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            next.push({ id: uid(), text: normalized, weight: item.weight });
+          }
+        });
+        return next;
+      });
+
+      setCons((prev) => {
+        const seen = new Set(prev.map((item) => item.text.trim().toLowerCase()));
+        const next = [...prev];
+        payload.suggestions.cons.forEach((item) => {
+          const normalized = item.text.trim();
+          if (!normalized) return;
+          const key = normalized.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            next.push({ id: uid(), text: normalized, weight: -item.weight });
+          }
+        });
+        return next;
+      });
+
+      setIce({
+        impact: payload.ice.impact,
+        confidence: payload.ice.confidence,
+        ease: payload.ice.ease,
+      });
+
+      toast.success("Gemini 分析已完成，建議已同步進入矩陣與 ICE 評估。", {
+        description: "你可以直接檢視新增的 AI 建議因子與調整後的分數。",
+      });
+    } catch (error) {
+      console.error("Gemini analysis failed", error);
+      setAnalysis(analyze(topic));
+      toast.error("Gemini 分析失敗，已切回本地備援分析。", {
+        description:
+          error instanceof Error ? error.message : "請確認 API Key 正確且可被本機頁面呼叫。",
+      });
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   // Confidence + grounding derived from user input
@@ -498,25 +680,34 @@ export function DecideNow() {
                     </div>
                     <div className="mt-1 text-lg font-semibold">{verdict}</div>
                   </div>
-                  <button
-                    onClick={runAnalysis}
-                    disabled={!canAnalyze || loading}
-                    className="group relative overflow-hidden rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:brightness-110 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <span className="flex items-center gap-2">
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          AI 正在思考…
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          AI 盲點偵測
-                        </>
-                      )}
-                    </span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="password"
+                      value={apiKeyInput}
+                      onChange={(e) => setApiKeyInput(e.target.value)}
+                      placeholder="輸入 Gemini API Key"
+                      className="min-w-[220px] rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm text-foreground shadow-inner outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
+                    />
+                    <button
+                      onClick={() => void runAnalysis()}
+                      disabled={!canAnalyze || loading}
+                      className="group relative overflow-hidden rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:brightness-110 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <span className="flex items-center gap-2">
+                        {loading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            AI 正在思考…
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            AI 盲點偵測
+                          </>
+                        )}
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-6">
@@ -730,7 +921,7 @@ export function DecideNow() {
           )}
 
           <footer className="mt-16 text-center text-xs text-muted-foreground">
-            DecideNow · 前端原型 · 由規則引擎模擬 AI 反饋
+            DecideNow · 前端原型 · 由 Gemini AI 驅動的決策引擎
           </footer>
         </div>
       </div>
