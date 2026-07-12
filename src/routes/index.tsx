@@ -107,6 +107,7 @@ export default function App() {
       {!topic ? (
         <div className="max-w-md mx-auto space-y-4">
           <h1 className="text-2xl font-bold">DecideNow 決策矩陣</h1>
+          <h1 className="text-4xl font-bold">DecideNow 測試更新狀態</h1>
           <input
             value={apiKeyInput}
             onChange={(e) => {
