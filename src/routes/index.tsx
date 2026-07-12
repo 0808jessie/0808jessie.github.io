@@ -58,21 +58,36 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-type PresetTag = { text: string; weight: number; keywords: RegExp };
+type PresetTag = {
+  text: string;
+  weight: number;
+  keywords: RegExp;
+  highlightTone?: "amber" | "teal";
+};
 
 const PROS_TAGS: PresetTag[] = [
-  { text: "發揮空間大", weight: 4, keywords: /新創|startup|公司/i },
-  { text: "組織扁平", weight: 3, keywords: /新創|startup|扁平/i },
-  { text: "累積實戰經驗", weight: 4, keywords: /實習|intern|工作|職|新創/i },
-  { text: "建立產業人脈", weight: 3, keywords: /實習|intern|工作|職|公司/i },
+  { text: "發揮空間大", weight: 4, keywords: /新創|startup|公司/i, highlightTone: "amber" },
+  { text: "組織扁平", weight: 3, keywords: /新創|startup|扁平/i, highlightTone: "amber" },
+  {
+    text: "提早累積實戰經驗",
+    weight: 4,
+    keywords: /實習|intern|工作|職|新創/i,
+    highlightTone: "teal",
+  },
+  { text: "建立產業人脈", weight: 3, keywords: /實習|intern|工作|職|公司/i, highlightTone: "teal" },
   { text: "薪資具備彈性", weight: 3, keywords: /新創|公司|工作|職|薪/i },
 ];
 
 const CONS_TAGS: PresetTag[] = [
-  { text: "制度較不完善", weight: 4, keywords: /新創|startup/i },
-  { text: "資金風險較高", weight: 3, keywords: /新創|startup|公司/i },
-  { text: "課業工作雙重壓力", weight: 4, keywords: /實習|intern|學|課/i },
-  { text: "通勤時間成本高", weight: 2, keywords: /實習|intern|工作|職|通勤/i },
+  { text: "制度較不完善", weight: 4, keywords: /新創|startup/i, highlightTone: "amber" },
+  { text: "資金風險較高", weight: 3, keywords: /新創|startup|公司/i, highlightTone: "amber" },
+  { text: "課業與工作雙重壓力", weight: 4, keywords: /實習|intern|學|課/i, highlightTone: "teal" },
+  {
+    text: "通勤時間成本高",
+    weight: 2,
+    keywords: /實習|intern|工作|職|通勤/i,
+    highlightTone: "teal",
+  },
   { text: "加班頻率較高", weight: 3, keywords: /工作|職|公司|加班/i },
 ];
 
@@ -139,13 +154,14 @@ export function DecideNow() {
   }, []);
 
   const currentIceScore = ice.impact * ice.confidence * ice.ease;
+  const activeQuestion = topic ?? draft;
 
   const prosScore = useMemo(
-    () => pros.reduce((s, i) => s + (i.text.trim() ? i.weight : 0), 0),
+    () => pros.reduce((s, i) => s + (i.text.trim() ? Math.abs(i.weight) : 0), 0),
     [pros],
   );
   const consScore = useMemo(
-    () => cons.reduce((s, i) => s + (i.text.trim() ? i.weight : 0), 0),
+    () => cons.reduce((s, i) => s + (i.text.trim() ? Math.abs(i.weight) : 0), 0),
     [cons],
   );
   const total = prosScore + consScore;
@@ -202,7 +218,11 @@ export function DecideNow() {
   };
 
   const addPresetTag = (side: "pros" | "cons", tag: PresetTag) => {
-    const item: Item = { id: uid(), text: tag.text, weight: tag.weight };
+    const item: Item = {
+      id: uid(),
+      text: tag.text,
+      weight: side === "pros" ? tag.weight : -tag.weight,
+    };
     if (side === "pros") setPros((p) => [...p, item]);
     else setCons((c) => [...c, item]);
   };
@@ -453,7 +473,7 @@ export function DecideNow() {
                   onUpdate={(id, patch) => updateItem("pros", id, patch)}
                   onRemove={(id) => removeItem("pros", id)}
                   tagPool={PROS_TAGS}
-                  topic={topic}
+                  topic={activeQuestion}
                   onAddTag={(tag) => addPresetTag("pros", tag)}
                 />
                 <Column
@@ -464,7 +484,7 @@ export function DecideNow() {
                   onUpdate={(id, patch) => updateItem("cons", id, patch)}
                   onRemove={(id) => removeItem("cons", id)}
                   tagPool={CONS_TAGS}
-                  topic={topic}
+                  topic={activeQuestion}
                   onAddTag={(tag) => addPresetTag("cons", tag)}
                 />
               </section>
@@ -922,38 +942,25 @@ function Column({
         <div className="flex flex-wrap gap-1.5">
           {tagPool.map((tag) => {
             const highlighted = tag.keywords.test(topic);
+            const toneClass =
+              highlighted && tag.highlightTone === "amber"
+                ? "border-amber-500 bg-amber-50 text-amber-700 shadow-[0_0_0_1px_rgba(245,158,11,0.16)] animate-pulse"
+                : highlighted && tag.highlightTone === "teal"
+                  ? "border-teal-500 bg-teal-50 text-teal-700 shadow-[0_0_0_1px_rgba(20,184,166,0.16)] animate-pulse"
+                  : "border-border bg-[#F4F1EA] text-muted-foreground";
             return (
               <button
                 key={tag.text}
                 onClick={() => onAddTag(tag)}
-                className="group inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all hover:-translate-y-0.5 active:scale-95"
-                style={
-                  highlighted
-                    ? {
-                        borderColor: `color-mix(in oklab, ${accent} 55%, transparent)`,
-                        color: accent,
-                        background: `color-mix(in oklab, ${accent} 10%, transparent)`,
-                        boxShadow: `0 0 12px -4px color-mix(in oklab, ${accent} 45%, transparent)`,
-                      }
-                    : {
-                        borderColor: "var(--border)",
-                        color: "var(--muted-foreground)",
-                        background: "#F4F1EA",
-                      }
-                }
+                className={`group inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all hover:-translate-y-0.5 active:scale-95 ${toneClass}`}
                 title={`${prefix} ${tag.text}（${sign}${tag.weight} 分）`}
               >
                 <span>
                   {prefix} {tag.text}
                 </span>
                 <span
-                  className="rounded-sm px-1 text-[10px] font-bold tabular-nums"
-                  style={{
-                    color: accent,
-                    background: highlighted
-                      ? "rgba(255,255,255,0.6)"
-                      : `color-mix(in oklab, ${accent} 12%, transparent)`,
-                  }}
+                  className={`rounded-sm px-1 text-[10px] font-bold tabular-nums ${highlighted ? "bg-white/80" : "bg-white/60"}`}
+                  style={{ color: accent }}
                 >
                   {sign}
                   {tag.weight}
@@ -1005,8 +1012,10 @@ function ItemRow({
           min={1}
           max={5}
           step={1}
-          value={item.weight}
-          onChange={(e) => onChange({ weight: Number(e.target.value) })}
+          value={Math.abs(item.weight)}
+          onChange={(e) =>
+            onChange({ weight: item.weight < 0 ? -Number(e.target.value) : Number(e.target.value) })
+          }
           className="flex-1 accent-current"
           style={{ color: accent }}
         />
@@ -1017,7 +1026,7 @@ function ItemRow({
             background: `color-mix(in oklab, ${accent} 15%, transparent)`,
           }}
         >
-          {item.weight}
+          {item.weight < 0 ? `-${Math.abs(item.weight)}` : item.weight}
         </span>
       </div>
       <div className="mt-1 flex justify-between px-2 text-[10px] text-muted-foreground">
