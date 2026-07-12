@@ -39,6 +39,7 @@ type Analysis = {
   blindspot: string;
   weightCheck: string;
   nextStep: string;
+  sandboxFeedback: string;
 };
 
 type HistoryEntry = {
@@ -56,20 +57,15 @@ const GEMINI_KEY_STORAGE_KEY = "decide-now-gemini-key";
 const MAX_LEN = 50;
 
 type GeminiDecisionPayload = {
-  analysis: {
-    blindspot: string;
-    weightCheck: string;
-    nextStep: string;
-  };
-  suggestions: {
-    pros: Array<{ text: string; weight: number }>;
-    cons: Array<{ text: string; weight: number }>;
-  };
-  ice: {
+  suggestedAdvantages: Array<{ text: string; score: number }>;
+  suggestedDisadvantages: Array<{ text: string; score: number }>;
+  iceAssessment: {
     impact: number;
     confidence: number;
     ease: number;
+    reasoning: string;
   };
+  sandboxFeedback: string;
 };
 
 function uid() {
@@ -82,38 +78,6 @@ type AiTag = {
   tone?: "amber" | "teal";
 };
 
-function analyze(topic: string): Analysis {
-  const t = topic.toLowerCase();
-  if (/實習|工作|職|intern|job/i.test(topic) || /實習|工作|職/.test(t)) {
-    return {
-      blindspot:
-        "你目前主要關注在『職涯經驗』與『經濟收入』，但根據過往數據，你可能遺漏了『期末考週與專題發表期的雙重壓力』，以及『每日往返通勤的時間與精神隱性成本』。",
-      weightCheck:
-        "你將『獲得 1-2 年全職經驗』的權重拉到了 5 分。這是一項高期望投資，請務必在面試時確認該職缺是否具備扎實的導師制度（Mentorship），否則此 5 分的預期權重將面臨降級風險。",
-      nextStep:
-        "不要陷入去或不去的二分法。建議與雇主協商『前 4 週為壓力測試期』，若開學後課業負載過重，爭取轉換為每週 1 天遠端協作（Remote）的彈性模式。",
-    };
-  }
-  if (/買|購|消費|購物|buy|purchase/i.test(topic)) {
-    return {
-      blindspot:
-        "你高度聚焦在商品帶來的『立即性升級感』。請注意你是否忽略了後續的『維護保養成本、折舊率』，以及該物品在 3 個月後的『實際使用頻率』。",
-      weightCheck:
-        "你將『感性喜愛度』設為 5 分。建議冷靜 48 小時後重新評估，確認這是『剛需（Need）』還是『想要（Want）』。",
-      nextStep:
-        "建議先尋找租賃平台租借使用一週末，以最低成本驗證自己是否真的高頻率需要此物品，再決定是否購買全新品。",
-    };
-  }
-  return {
-    blindspot:
-      "當前你列出的利弊多屬於短期可見因子。請試著將時間軸拉長至一年後，問自己：『一年後的我，還會在意現在這個缺點嗎？』",
-    weightCheck:
-      "目前的加權總分呈現高度拉鋸。這代表你試圖用理性的分數來掩飾感性的偏好，建議檢視分數最高的項目是否摻雜了情緒通膨。",
-    nextStep:
-      "若利弊完全對等，代表兩者皆非最佳解。試著列出第三種完全不在此範疇內的替代選項（Option C），打破僵局。",
-  };
-}
-
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, Math.round(value)));
 }
@@ -123,47 +87,47 @@ function parseGeminiPayload(rawText: string | undefined): GeminiDecisionPayload 
     throw new Error("Gemini 沒有回傳任何內容。");
   }
 
-  const cleaned = rawText
-    .replace(/^```(?:json)?/i, "")
-    .replace(/```$/i, "")
-    .trim();
+  const backticks = String.fromCharCode(96, 96, 96);
+  const startRegex = new RegExp("^" + backticks + "(?:json)?", "i");
+  const endRegex = new RegExp(backticks + "$", "i");
+
+  const cleaned = rawText.replace(startRegex, "").replace(endRegex, "").trim();
 
   const parsed = JSON.parse(cleaned) as Partial<GeminiDecisionPayload>;
-  const analysis = parsed.analysis as Partial<GeminiDecisionPayload["analysis"]> | undefined;
-  const suggestions = parsed.suggestions as
-    | Partial<GeminiDecisionPayload["suggestions"]>
-    | undefined;
-  const ice = parsed.ice as Partial<GeminiDecisionPayload["ice"]> | undefined;
+
+  const suggestedAdvantages = Array.isArray(parsed.suggestedAdvantages)
+    ? parsed.suggestedAdvantages.map((item) => ({
+        text: typeof item?.text === "string" ? item.text : "",
+        score: typeof item?.score === "number" ? Math.max(1, Math.min(5, Math.abs(item.score))) : 3,
+      }))
+    : [];
+
+  const suggestedDisadvantages = Array.isArray(parsed.suggestedDisadvantages)
+    ? parsed.suggestedDisadvantages.map((item) => ({
+        text: typeof item?.text === "string" ? item.text : "",
+        score: typeof item?.score === "number" ? Math.max(1, Math.min(5, Math.abs(item.score))) : 3,
+      }))
+    : [];
+
+  const ice = parsed.iceAssessment;
+  const iceAssessment = {
+    impact: typeof ice?.impact === "number" ? clamp(ice.impact, 1, 10) : 5,
+    confidence: typeof ice?.confidence === "number" ? clamp(ice.confidence, 1, 10) : 5,
+    ease: typeof ice?.ease === "number" ? clamp(ice.ease, 1, 10) : 5,
+    reasoning: typeof ice?.reasoning === "string" ? ice.reasoning : "無核心理由。",
+  };
+
+  const sandboxFeedback = typeof parsed.sandboxFeedback === "string" ? parsed.sandboxFeedback : "";
 
   return {
-    analysis: {
-      blindspot: typeof analysis?.blindspot === "string" ? analysis.blindspot : "",
-      weightCheck: typeof analysis?.weightCheck === "string" ? analysis.weightCheck : "",
-      nextStep: typeof analysis?.nextStep === "string" ? analysis.nextStep : "",
-    },
-    suggestions: {
-      pros: Array.isArray(suggestions?.pros)
-        ? suggestions.pros.filter(
-            (item): item is { text: string; weight: number } =>
-              !!item && typeof item.text === "string" && typeof item.weight === "number",
-          )
-        : [],
-      cons: Array.isArray(suggestions?.cons)
-        ? suggestions.cons.filter(
-            (item): item is { text: string; weight: number } =>
-              !!item && typeof item.text === "string" && typeof item.weight === "number",
-          )
-        : [],
-    },
-    ice: {
-      impact: typeof ice?.impact === "number" ? clamp(ice.impact, 1, 10) : 5,
-      confidence: typeof ice?.confidence === "number" ? clamp(ice.confidence, 1, 10) : 5,
-      ease: typeof ice?.ease === "number" ? clamp(ice.ease, 1, 10) : 5,
-    },
+    suggestedAdvantages,
+    suggestedDisadvantages,
+    iceAssessment,
+    sandboxFeedback,
   };
 }
 
-export function DecideNow() {
+export default function App() {
   const [draft, setDraft] = useState("");
   const [topic, setTopic] = useState<string | null>(null);
   const [pros, setPros] = useState<Item[]>([]);
@@ -171,6 +135,7 @@ export function DecideNow() {
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const [sandboxFeedback, setSandboxFeedback] = useState("");
   const [aiTagPool, setAiTagPool] = useState<{ pros: AiTag[]; cons: AiTag[] }>({
     pros: [],
     cons: [],
@@ -184,7 +149,8 @@ export function DecideNow() {
     if (typeof window === "undefined") return "";
     return window.localStorage.getItem(GEMINI_KEY_STORAGE_KEY) ?? "";
   });
-  const envApiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim() ?? "";
+
+  const envApiKey = "";
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
@@ -221,10 +187,9 @@ export function DecideNow() {
   const total = prosScore + consScore;
   const prosPct = total === 0 ? 50 : (prosScore / total) * 100;
 
-  // Dynamic bar color based on lean
   const diff = prosScore - consScore;
   const denom = Math.max(total, 1);
-  const lean = diff / denom; // -1..1
+  const lean = diff / denom;
   let barColor = "var(--primary)";
   if (lean > 0.2) barColor = "var(--success)";
   else if (lean < -0.2) barColor = "var(--destructive)";
@@ -246,8 +211,8 @@ export function DecideNow() {
     setCons([]);
     setAiTagPool({ pros: [], cons: [] });
     setAnalysis(null);
+    setSandboxFeedback("");
     setFeedback(null);
-    void runAnalysis(v);
   };
 
   const resetTopic = () => {
@@ -256,6 +221,7 @@ export function DecideNow() {
     setCons([]);
     setAiTagPool({ pros: [], cons: [] });
     setAnalysis(null);
+    setSandboxFeedback("");
     setFeedback(null);
     setDraft("");
   };
@@ -325,7 +291,14 @@ export function DecideNow() {
       return;
     }
 
-    const reportText = `決策命題：${topic}\nICE 綜合分數：${currentIceScore}\n優點/機會：${pros.filter((item) => item.text.trim()).length} 項\n缺點/風險：${cons.filter((item) => item.text.trim()).length} 項`;
+    const prosCount = pros.filter((item) => item.text.trim()).length;
+    const consCount = cons.filter((item) => item.text.trim()).length;
+    const reportText = [
+      "決策命題：" + topic,
+      "ICE 綜合分數：" + currentIceScore,
+      "優點/機會：" + prosCount + " 項",
+      "缺點/風險：" + consCount + " 項",
+    ].join("\n");
 
     try {
       await navigator.clipboard.writeText(reportText);
@@ -350,72 +323,76 @@ export function DecideNow() {
 
   const canAnalyze = !!topic;
 
-  const runAnalysis = async (topicOverride?: string) => {
-    const activeTopic = topicOverride?.trim() || topic?.trim();
+  const runAnalysis = async () => {
+    const activeTopic = topic?.trim();
     if (!activeTopic) {
-      toast.error("請先輸入決策命題，再進行 AI 分析。", {
-        description: "命題輸入後會自動開始分析。",
-      });
+      toast.error("請先輸入決策命題，再進行 AI 分析。");
       return;
     }
 
     const key = apiKeyInput.trim() || envApiKey;
     if (!key) {
-      toast.error("請先輸入 Gemini API Key，或在部署環境中設定 VITE_GEMINI_API_KEY。", {
-        description: "分析按鈕會直接請 Gemini 生成結構化建議與 ICE 評估。",
-      });
+      alert("請在儀表板右側輸入您的 Gemini API Key！");
       return;
     }
 
     setLoading(true);
     setAnalysis(null);
+    setSandboxFeedback("");
     setFeedback(null);
 
     try {
-      const prompt = `你是決策教練。請針對以下決策命題與目前已整理的利弊，產出一份結構化 JSON。要求：
-1. 只輸出 JSON，不要任何額外文字。
-2. 內容必須是以下格式：
-{
-  "analysis": {
-    "blindspot": "...",
-    "weightCheck": "...",
-    "nextStep": "..."
-  },
-  "suggestions": {
-    "pros": [{"text": "...", "weight": 2}],
-    "cons": [{"text": "...", "weight": 2}]
-  },
-  "ice": {"impact": 1, "confidence": 1, "ease": 1}
-}
-3. analysis 的內容要針對中文決策情境，提供可執行的盲點、權重校正與替代方案。
-4. suggestions 的每一項都要是具體、能直接加入決策矩陣的因子，且權重請用 1 到 5 的整數。
-5. ice 的分數要用 1 到 10 的整數，反映這個決策在實際執行時的可行性。
+      const promptLines = [
+        "你是資深產品經理與敏捷教練。請根據以下決策命題，輸出一個嚴格可被 JSON.parse() 直接解析的純 JSON 物件，不要使用任何 Markdown 程式碼區塊語法，也不要包含任何額外文字。",
+        "",
+        "格式必須完全符合下述 JSON 結構：",
+        "{",
+        '  "suggestedAdvantages": [{"text": "AI 根據題目生成的優勢點子 1", "score": 4}, {"text": "AI 根據題目生成的優勢點子 2", "score": 3}, {"text": "AI 根據題目生成的優勢點子 3", "score": 3}],',
+        '  "suggestedDisadvantages": [{"text": "AI 根據題目生成的風險點子 1", "score": 4}, {"text": "AI 根據題目生成的風險點子 2", "score": 3}, {"text": "AI 根據題目生成的風險點子 3", "score": 3}],',
+        '  "iceAssessment": {',
+        '    "impact": 8,',
+        '    "confidence": 7,',
+        '    "ease": 6,',
+        '    "reasoning": "AI 給出的 20 字內 ICE 分數落點核心理由。"',
+        "  },",
+        '  "sandboxFeedback": "AI 給出的 80 字內 PM 決策沙盒盲點警示與反饋建議。"',
+        "}",
+        "",
+        "要求：",
+        "1. 只輸出純 JSON。",
+        "2. suggestedAdvantages 與 suggestedDisadvantages 都要固定生成 3 個項目。",
+        "3. score 請統一用 1 到 5 的正整數代表強度。",
+        "4. iceAssessment 的 impact/confidence/ease 請用 1 到 10 的整數。",
+        "5. reasoning 請極度精簡，20 字內。",
+        "6. sandboxFeedback 請精準犀利，80 字內。",
+        "",
+        "決策命題：" + activeTopic,
+        "",
+        "目前使用者已整理的優點：" +
+          (pros
+            .filter((item) => item.text.trim())
+            .map((item) => item.text + " (權重 " + item.weight + ")")
+            .join("；") || "無"),
+        "",
+        "目前使用者已整理的缺點：" +
+          (cons
+            .filter((item) => item.text.trim())
+            .map((item) => item.text + " (權重 " + item.weight + ")")
+            .join("；") || "無"),
+      ];
 
-決策命題：${activeTopic}
-
-目前優點：${
-        pros
-          .filter((item) => item.text.trim())
-          .map((item) => `${item.text} (權重 ${item.weight})`)
-          .join("；") || "無"
-      }
-
-目前缺點：${
-        cons
-          .filter((item) => item.text.trim())
-          .map((item) => `${item.text} (權重 ${item.weight})`)
-          .join("；") || "無"
-      }`;
+      const promptText = promptLines.join("\n");
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`,
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
+          encodeURIComponent(key),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
+            contents: [{ parts: [{ text: promptText }] }],
             generationConfig: {
-              temperature: 0.35,
+              temperature: 0.25,
               responseMimeType: "application/json",
             },
           }),
@@ -424,77 +401,57 @@ export function DecideNow() {
 
       if (!response.ok) {
         const errorBody = await response.text();
-        throw new Error(`Gemini API 回傳錯誤 ${response.status}: ${errorBody}`);
+        throw new Error("Gemini API 回傳錯誤 " + response.status + ": " + errorBody);
       }
 
       const data = (await response.json()) as {
         candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
       };
       const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
       const payload = parseGeminiPayload(responseText);
 
-      setAnalysis(payload.analysis);
+      const generatedAnalysis: Analysis = {
+        blindspot: "AI 盲點提示：" + payload.sandboxFeedback,
+        weightCheck: "AI 權重校正核心理由：" + payload.iceAssessment.reasoning,
+        nextStep:
+          "建議優先聚焦於「" +
+          (payload.suggestedAdvantages[0]?.text ?? "關鍵優勢") +
+          "」，並同步預留「" +
+          (payload.suggestedDisadvantages[0]?.text ?? "主要風險") +
+          "」的應變空間。",
+        sandboxFeedback: payload.sandboxFeedback,
+      };
+
+      setAnalysis(generatedAnalysis);
+      setSandboxFeedback(payload.sandboxFeedback);
+
       setAiTagPool({
-        pros: payload.suggestions.pros.map((item) => ({ text: item.text, weight: item.weight })),
-        cons: payload.suggestions.cons.map((item) => ({ text: item.text, weight: item.weight })),
-      });
-
-      setPros((prev) => {
-        const seen = new Set(prev.map((item) => item.text.trim().toLowerCase()));
-        const next = [...prev];
-        payload.suggestions.pros.forEach((item) => {
-          const normalized = item.text.trim();
-          if (!normalized) return;
-          const key = normalized.toLowerCase();
-          if (!seen.has(key)) {
-            seen.add(key);
-            next.push({ id: uid(), text: normalized, weight: item.weight });
-          }
-        });
-        return next;
-      });
-
-      setCons((prev) => {
-        const seen = new Set(prev.map((item) => item.text.trim().toLowerCase()));
-        const next = [...prev];
-        payload.suggestions.cons.forEach((item) => {
-          const normalized = item.text.trim();
-          if (!normalized) return;
-          const key = normalized.toLowerCase();
-          if (!seen.has(key)) {
-            seen.add(key);
-            next.push({ id: uid(), text: normalized, weight: -item.weight });
-          }
-        });
-        return next;
+        pros: payload.suggestedAdvantages.map((item) => ({
+          text: item.text,
+          weight: item.score,
+          tone: "teal",
+        })),
+        cons: payload.suggestedDisadvantages.map((item) => ({
+          text: item.text,
+          weight: item.score,
+          tone: "amber",
+        })),
       });
 
       setIce({
-        impact: payload.ice.impact,
-        confidence: payload.ice.confidence,
-        ease: payload.ice.ease,
-      });
-
-      toast.success("Gemini 已生成動態優缺點標籤與 ICE 建議。", {
-        description: "你可以直接點擊 AI 標籤加入矩陣，或調整 ICE 滑桿。",
+        impact: payload.iceAssessment.impact,
+        confidence: payload.iceAssessment.confidence,
+        ease: payload.iceAssessment.ease,
       });
     } catch (error) {
       console.error("Gemini analysis failed", error);
-      setAnalysis(analyze(activeTopic));
-      setAiTagPool({
-        pros: [{ text: "進一步拆解關鍵假設", weight: 3 }],
-        cons: [{ text: "確認執行阻力與資源限制", weight: 3 }],
-      });
-      toast.error("Gemini 分析失敗，已切回本地備援分析。", {
-        description:
-          error instanceof Error ? error.message : "請確認 API Key 正確且可被本機頁面呼叫。",
-      });
+      alert(error instanceof Error ? error.message : "請確認 API Key 是否正確。");
     } finally {
       setLoading(false);
     }
   };
 
-  // Confidence + grounding derived from user input
   const filledPros = pros.filter((i) => i.text.trim());
   const filledCons = cons.filter((i) => i.text.trim());
   const totalItems = filledPros.length + filledCons.length;
@@ -522,7 +479,6 @@ export function DecideNow() {
 
   const sendFeedback = (kind: "up" | "down") => {
     setFeedback(kind);
-    toast.success("感謝您的反饋，這將讓決策教練越變越聰明！");
   };
 
   return (
@@ -550,7 +506,6 @@ export function DecideNow() {
         )}
 
         <div className="min-w-0 flex-1">
-          {/* Header */}
           <header className="mb-10 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div
@@ -585,7 +540,6 @@ export function DecideNow() {
             </div>
           </header>
 
-          {/* Topic input */}
           {!topic ? (
             <section className="rounded-3xl border border-border bg-card/60 p-6 shadow-2xl backdrop-blur sm:p-10">
               <div className="mx-auto max-w-2xl text-center">
@@ -633,7 +587,6 @@ export function DecideNow() {
             </section>
           ) : (
             <>
-              {/* Locked topic */}
               <section className="mb-8 flex items-start justify-between gap-4 rounded-2xl border border-border bg-card/60 p-5 shadow-lg">
                 <div className="min-w-0">
                   <div className="mb-1.5 flex items-center gap-2 text-xs text-muted-foreground">
@@ -653,7 +606,6 @@ export function DecideNow() {
                 </button>
               </section>
 
-              {/* Matrix */}
               <section className="grid gap-5 lg:grid-cols-2">
                 <Column
                   side="pros"
@@ -679,7 +631,6 @@ export function DecideNow() {
                 />
               </section>
 
-              {/* Dashboard */}
               <section className="mt-8 rounded-2xl border border-border bg-card/60 p-6 shadow-2xl">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
@@ -705,12 +656,11 @@ export function DecideNow() {
                         {loading ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            AI 正在思考…
+                            AI 評估中...
                           </>
                         ) : (
                           <>
-                            <Sparkles className="h-4 w-4" />
-                            AI 盲點偵測
+                            <Sparkles className="h-4 w-4" />✨ AI 盲點偵測
                           </>
                         )}
                       </span>
@@ -755,7 +705,6 @@ export function DecideNow() {
                 </div>
               </section>
 
-              {/* Analysis Panel — always visible after topic locked */}
               <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_4px_20px_rgba(0,0,0,0.03)] animate-fade-in">
                 <header
                   className="flex items-center justify-between border-b border-border px-6 py-4"
@@ -779,7 +728,6 @@ export function DecideNow() {
                   )}
                 </header>
 
-                {/* Diagnosis summary — always show when analysis exists */}
                 {analysis && (
                   <DiagnosisSummary
                     confidence={confidence}
@@ -809,7 +757,11 @@ export function DecideNow() {
                           accent="var(--primary)"
                           grounding={
                             topPro
-                              ? `基於您輸入的：【${topPro.text} (${topPro.weight}分)】進行交叉推理`
+                              ? "基於您輸入的：【" +
+                                topPro.text +
+                                " (" +
+                                topPro.weight +
+                                "分)】進行交叉推理"
                               : null
                           }
                         />
@@ -821,9 +773,17 @@ export function DecideNow() {
                           accent="var(--destructive)"
                           grounding={
                             topCon
-                              ? `基於您輸入的：【${topCon.text} (${topCon.weight}分)】進行權重校正`
+                              ? "基於您輸入的：【" +
+                                topCon.text +
+                                " (" +
+                                topCon.weight +
+                                "分)】進行權重校正"
                               : topPro
-                                ? `基於您輸入的：【${topPro.text} (${topPro.weight}分)】進行權重校正`
+                                ? "基於您輸入的：【" +
+                                  topPro.text +
+                                  " (" +
+                                  topPro.weight +
+                                  "分)】進行權重校正"
                                 : null
                           }
                         />
@@ -837,15 +797,14 @@ export function DecideNow() {
                         />
                       </div>
 
-                      {/* PM Decision Sandbox */}
                       <PMDecisionSandbox
                         ice={ice}
                         onIceChange={(patch) => setIce((s) => ({ ...s, ...patch }))}
                         topic={topic!}
                         topCon={topCon}
+                        sandboxFeedback={sandboxFeedback || analysis?.sandboxFeedback || ""}
                       />
 
-                      {/* Feedback loop */}
                       <div className="mt-6 flex flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground">
                         <span className="mr-1">這則分析對您有幫助嗎？</span>
                         <button
@@ -887,7 +846,6 @@ export function DecideNow() {
                       </div>
                     </>
                   ) : (
-                    /* Placeholder empty state */
                     <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
                       <div
                         className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
@@ -1132,7 +1090,6 @@ function Column({
         新增項目
       </button>
 
-      {/* Persistent AI preset tag pool */}
       <div className="mt-4 border-t border-dashed border-border/60 pt-3">
         <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           <Sparkles className="h-3 w-3" style={{ color: accent }} />
@@ -1304,11 +1261,13 @@ function PMDecisionSandbox({
   onIceChange,
   topic,
   topCon,
+  sandboxFeedback,
 }: {
   ice: { impact: number; confidence: number; ease: number };
   onIceChange: (patch: Partial<{ impact: number; confidence: number; ease: number }>) => void;
   topic: string;
   topCon: Item | undefined;
+  sandboxFeedback: string;
 }) {
   const score = ice.impact * ice.confidence * ice.ease;
   const verdict =
@@ -1333,13 +1292,13 @@ function PMDecisionSandbox({
             body: "回報過低或執行難度過高，建議重新審視命題或尋找替代方案。",
           };
 
-  const isJob = /實習|工作|職|intern|job/i.test(topic);
+  const isJob =
+    topic.toLowerCase().includes("工作") || topic.includes("職") || topic.includes("實習");
   const riskLabel = topCon
     ? `${topCon.text}（權重 ${topCon.weight} 分）`
     : "當前矩陣中權重最高的負面因子";
-  const planB = isJob
-    ? "與主管約定前兩週為試運行期，若每週 16 小時嚴重影響課業，於第 3 週啟動『每週 1 天改為遠端非同步協作』的緩衝方案。"
-    : "設定一個停損點（Trigger Point），例如執行 4 週後若轉換率或滿意度未達預期，立即召開回顧會議（Retrospective）並切換至替代方案 C。";
+  const aiPlanB =
+    sandboxFeedback || `針對「${topic}」先定義一個最小實驗與停損門檻，再決定是否繼續投入。`;
 
   return (
     <div className="mt-6 rounded-2xl border border-border p-5" style={{ background: "#F4F6F9" }}>
@@ -1360,7 +1319,6 @@ function PMDecisionSandbox({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* ICE Framework */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <div className="mb-3 flex items-center gap-2">
             <Gauge className="h-4 w-4" style={{ color: "var(--primary)" }} />
@@ -1417,7 +1375,6 @@ function PMDecisionSandbox({
             </div>
           </div>
 
-          {/* ICE algorithm note card */}
           <div
             className="mt-3 rounded-lg border p-3 text-[11px] leading-relaxed text-muted-foreground"
             style={{
@@ -1451,7 +1408,6 @@ function PMDecisionSandbox({
           </div>
         </div>
 
-        {/* Risk Mitigation & Plan B */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <div className="mb-3 flex items-center gap-2">
             <LifeBuoy className="h-4 w-4" style={{ color: "var(--destructive)" }} />
@@ -1494,7 +1450,7 @@ function PMDecisionSandbox({
               <Zap className="h-3.5 w-3.5" />
               💡 PM 應變計畫 (Plan B)
             </div>
-            <p className="mt-1.5 text-sm leading-relaxed text-foreground/85">{planB}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-foreground/85">{aiPlanB}</p>
           </div>
 
           <div className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
