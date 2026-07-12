@@ -266,7 +266,7 @@ export default function App() {
               </div>
             )}
 
-            {loading && <div className="text-center animate-pulse">AI 正在思考中...</div>}
+            {loading && <div className="text-center animate-pulse">AI 正在思考中</div>}
           </div>
         )}
       </div>
