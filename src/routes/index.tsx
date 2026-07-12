@@ -87,12 +87,13 @@ function parseGeminiPayload(rawText: string | undefined): GeminiDecisionPayload 
     throw new Error("Gemini 沒有回傳任何內容。");
   }
 
-  const backticks = String.fromCharCode(96, 96, 96);
-  const startRegex = new RegExp("^" + backticks + "(?:json)?", "i");
-  const endRegex = new RegExp(backticks + "$", "i");
+  // 使用正則表達式精準提取 JSON 區塊，避免 Markdown 外框干擾
+  const match = rawText.match(/\{[\s\S]*\}/);
+  if (!match) {
+    throw new Error("無法從 AI 回應中解析出正確的 JSON 格式。");
+  }
 
-  const cleaned = rawText.replace(startRegex, "").replace(endRegex, "").trim();
-
+  const cleaned = match[0];
   const parsed = JSON.parse(cleaned) as Partial<GeminiDecisionPayload>;
 
   const suggestedAdvantages = Array.isArray(parsed.suggestedAdvantages)
@@ -326,13 +327,14 @@ export default function App() {
   const runAnalysis = async () => {
     const activeTopic = topic?.trim();
     if (!activeTopic) {
-      toast.error("請先輸入決策命題，再進行 AI 分析。");
+      toast.error("缺少決策命題", { description: "請先輸入決策命題，再進行 AI 分析。" });
       return;
     }
 
     const key = apiKeyInput.trim() || envApiKey;
     if (!key) {
-      alert("請在儀表板右側輸入您的 Gemini API Key！");
+      // 在 iframe 中禁止使用 alert，改用 toast 以避免靜默報錯
+      toast.error("缺少 API Key", { description: "請在儀表板右側輸入您的 Gemini API Key！" });
       return;
     }
 
@@ -343,28 +345,27 @@ export default function App() {
 
     try {
       const promptLines = [
-        "你是資深產品經理與敏捷教練。請根據以下決策命題，輸出一個嚴格可被 JSON.parse() 直接解析的純 JSON 物件，不要使用任何 Markdown 程式碼區塊語法，也不要包含任何額外文字。",
+        "你是資深產品經理與敏捷教練。請根據以下決策命題，進行深度思考，並嚴格輸出可被 JSON.parse() 解析的純 JSON 物件。",
+        "請務必提供具體、切合情境的反饋，切勿使用空泛的預設詞彙。",
         "",
         "格式必須完全符合下述 JSON 結構：",
         "{",
-        '  "suggestedAdvantages": [{"text": "AI 根據題目生成的優勢點子 1", "score": 4}, {"text": "AI 根據題目生成的優勢點子 2", "score": 3}, {"text": "AI 根據題目生成的優勢點子 3", "score": 3}],',
-        '  "suggestedDisadvantages": [{"text": "AI 根據題目生成的風險點子 1", "score": 4}, {"text": "AI 根據題目生成的風險點子 2", "score": 3}, {"text": "AI 根據題目生成的風險點子 3", "score": 3}],',
+        '  "suggestedAdvantages": [{"text": "具體且深入的優勢點子1", "score": 4}, {"text": "具體的優勢點子2", "score": 3}, {"text": "具體的優勢點子3", "score": 3}, {"text": "具體的優勢點子4", "score": 2}],',
+        '  "suggestedDisadvantages": [{"text": "具體且深入的風險點子1", "score": 4}, {"text": "具體的風險點子2", "score": 3}, {"text": "具體的風險點子3", "score": 3}, {"text": "具體的風險點子4", "score": 2}],',
         '  "iceAssessment": {',
         '    "impact": 8,',
         '    "confidence": 7,',
         '    "ease": 6,',
         '    "reasoning": "AI 給出的 20 字內 ICE 分數落點核心理由。"',
         "  },",
-        '  "sandboxFeedback": "AI 給出的 80 字內 PM 決策沙盒盲點警示與反饋建議。"',
+        '  "sandboxFeedback": "針對此命題給出的 80 字內 PM 決策沙盒盲點警示與反饋建議。"',
         "}",
         "",
         "要求：",
-        "1. 只輸出純 JSON。",
-        "2. suggestedAdvantages 與 suggestedDisadvantages 都要固定生成 3 個項目。",
+        "1. 絕對只輸出 JSON 物件，不要任何 Markdown 標記或額外文字。",
+        "2. suggestedAdvantages (優點/機會) 與 suggestedDisadvantages (缺點/風險) 請根據命題「強制各生成 3 到 5 個不同且具體的項目」。",
         "3. score 請統一用 1 到 5 的正整數代表強度。",
-        "4. iceAssessment 的 impact/confidence/ease 請用 1 到 10 的整數。",
-        "5. reasoning 請極度精簡，20 字內。",
-        "6. sandboxFeedback 請精準犀利，80 字內。",
+        "4. iceAssessment 的分數請用 1 到 10。",
         "",
         "決策命題：" + activeTopic,
         "",
@@ -392,7 +393,7 @@ export default function App() {
           body: JSON.stringify({
             contents: [{ parts: [{ text: promptText }] }],
             generationConfig: {
-              temperature: 0.25,
+              temperature: 0.35,
               responseMimeType: "application/json",
             },
           }),
@@ -401,7 +402,7 @@ export default function App() {
 
       if (!response.ok) {
         const errorBody = await response.text();
-        throw new Error("Gemini API 回傳錯誤 " + response.status + ": " + errorBody);
+        throw new Error("API 請求失敗 (" + response.status + "): " + errorBody);
       }
 
       const data = (await response.json()) as {
@@ -444,9 +445,16 @@ export default function App() {
         confidence: payload.iceAssessment.confidence,
         ease: payload.iceAssessment.ease,
       });
+
+      toast.success("AI 決策分析已完成！", {
+        description: "已為您動態產生多組標籤與最新沙盒反饋。",
+      });
     } catch (error) {
       console.error("Gemini analysis failed", error);
-      alert(error instanceof Error ? error.message : "請確認 API Key 是否正確。");
+      toast.error("AI 分析失敗", {
+        description:
+          error instanceof Error ? error.message : "請確認 API Key 是否正確且網路連線正常。",
+      });
     } finally {
       setLoading(false);
     }
@@ -479,6 +487,7 @@ export default function App() {
 
   const sendFeedback = (kind: "up" | "down") => {
     setFeedback(kind);
+    toast.success("感謝回饋", { description: "您的意見將幫助決策模型持續進化。" });
   };
 
   return (
@@ -1292,11 +1301,6 @@ function PMDecisionSandbox({
             body: "回報過低或執行難度過高，建議重新審視命題或尋找替代方案。",
           };
 
-  const isJob =
-    topic.toLowerCase().includes("工作") || topic.includes("職") || topic.includes("實習");
-  const riskLabel = topCon
-    ? `${topCon.text}（權重 ${topCon.weight} 分）`
-    : "當前矩陣中權重最高的負面因子";
   const aiPlanB =
     sandboxFeedback || `針對「${topic}」先定義一個最小實驗與停損門檻，再決定是否繼續投入。`;
 
@@ -1431,8 +1435,12 @@ function PMDecisionSandbox({
               🚨 最大風險
             </div>
             <p className="mt-1.5 text-sm leading-relaxed" style={{ color: "#1A1A1A" }}>
-              {isJob ? "因要兼顧研究所導致精力耗盡" : "當前矩陣中權重最高的負面因子"}
-              <span className="ml-1 text-xs text-muted-foreground">（{riskLabel}）</span>
+              {topCon ? topCon.text : "當前矩陣中尚未列出風險因子"}
+              {topCon && (
+                <span className="ml-1 text-xs text-muted-foreground">
+                  （權重 {topCon.weight} 分）
+                </span>
+              )}
             </p>
           </div>
 
