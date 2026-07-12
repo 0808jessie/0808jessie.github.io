@@ -654,12 +654,23 @@ export default function App() {
     } catch (error) {
       console.error("Gemini analysis failed", error);
 
-      const message =
-        error instanceof Error ? error.message : "請確認 API Key 是否正確且網路連線正常。";
+      // 檢查是否為 429 Quota 超過錯誤
+      const isQuotaError =
+        error instanceof Error &&
+        (error.message.includes("429") || error.message.includes("Quota exceeded"));
 
-      setAnalysisError(message);
+      const message = isQuotaError
+        ? "今日 AI 免費分析額度已用盡 (20次/日)，請明天再試或綁定 API 付費帳單。"
+        : error instanceof Error
+          ? error.message
+          : "請確認 API Key 是否正確且網路連線正常。";
 
-      toast.error("AI 分析失敗", {
+      // 更新你的狀態 (setAnalysisError 是你原本定義的 state)
+      if (typeof setAnalysisError === "function") {
+        setAnalysisError(message);
+      }
+
+      toast.error(isQuotaError ? "額度已達上限" : "AI 分析失敗", {
         description: message,
       });
     } finally {
