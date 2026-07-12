@@ -184,6 +184,8 @@ export default function App() {
 
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
 
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
 
   const [sandboxFeedback, setSandboxFeedback] = useState("");
@@ -293,6 +295,8 @@ export default function App() {
 
     setAnalysis(null);
 
+    setAnalysisError(null);
+
     setSandboxFeedback("");
 
     setFeedback(null);
@@ -314,6 +318,8 @@ export default function App() {
     setAiTagPool({ pros: [], cons: [] });
 
     setAnalysis(null);
+
+    setAnalysisError(null);
 
     setSandboxFeedback("");
 
@@ -483,6 +489,8 @@ export default function App() {
 
     setAnalysis(null);
 
+    setAnalysisError(null);
+
     setSandboxFeedback("");
 
     setFeedback(null);
@@ -646,9 +654,13 @@ export default function App() {
     } catch (error) {
       console.error("Gemini analysis failed", error);
 
+      const message =
+        error instanceof Error ? error.message : "請確認 API Key 是否正確且網路連線正常。";
+
+      setAnalysisError(message);
+
       toast.error("AI 分析失敗", {
-        description:
-          error instanceof Error ? error.message : "請確認 API Key 是否正確且網路連線正常。",
+        description: message,
       });
     } finally {
       setLoading(false);
@@ -1117,6 +1129,43 @@ export default function App() {
                         </button>
                       </div>
                     </>
+                  ) : analysisError ? (
+                    <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+                      <div
+                        className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
+                        style={{
+                          background: "color-mix(in oklab, var(--destructive) 12%, transparent)",
+
+                          color: "var(--destructive)",
+                        }}
+                      >
+                        <ShieldAlert className="h-7 w-7" />
+                      </div>
+
+                      <h4
+                        className="text-base font-semibold"
+                        style={{ color: "var(--destructive)" }}
+                      >
+                        AI 分析失敗
+                      </h4>
+
+                      <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                        請確認 API Key 是否正確、額度是否充足，或稍後再試一次。以下為詳細錯誤訊息：
+                      </p>
+
+                      <pre className="mt-3 max-w-md whitespace-pre-wrap break-words rounded-lg border border-border bg-background/60 p-3 text-left text-[11px] leading-relaxed text-muted-foreground">
+                        {analysisError}
+                      </pre>
+
+                      <button
+                        onClick={() => void runAnalysis()}
+                        disabled={!canAnalyze}
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl border border-border bg-[#F4F1EA] px-4 py-2 text-xs font-medium text-foreground transition-all hover:border-primary/30 hover:bg-[#efe8dc]"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        重新嘗試 AI 分析
+                      </button>
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
                       <div
