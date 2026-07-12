@@ -94,27 +94,33 @@ function parseGeminiPayload(rawText: string | undefined): GeminiDecisionPayload 
   }
 
   const cleaned = match[0];
-  const parsed = JSON.parse(cleaned) as Partial<GeminiDecisionPayload>;
+  const parsed = JSON.parse(cleaned) as any;
+
+  // 強化轉型邏輯，預防 AI 回傳字串型態的數字
+  const parseNum = (val: any, fallback: number) => {
+    const n = Number(val);
+    return isNaN(n) ? fallback : n;
+  };
 
   const suggestedAdvantages = Array.isArray(parsed.suggestedAdvantages)
-    ? parsed.suggestedAdvantages.map((item) => ({
-        text: typeof item?.text === "string" ? item.text : "",
-        score: typeof item?.score === "number" ? Math.max(1, Math.min(5, Math.abs(item.score))) : 3,
+    ? parsed.suggestedAdvantages.map((item: any) => ({
+        text: typeof item?.text === "string" ? item.text : "未知的優勢",
+        score: clamp(parseNum(item?.score, 3), 1, 5),
       }))
     : [];
 
   const suggestedDisadvantages = Array.isArray(parsed.suggestedDisadvantages)
-    ? parsed.suggestedDisadvantages.map((item) => ({
-        text: typeof item?.text === "string" ? item.text : "",
-        score: typeof item?.score === "number" ? Math.max(1, Math.min(5, Math.abs(item.score))) : 3,
+    ? parsed.suggestedDisadvantages.map((item: any) => ({
+        text: typeof item?.text === "string" ? item.text : "未知的風險",
+        score: clamp(parseNum(item?.score, 3), 1, 5),
       }))
     : [];
 
   const ice = parsed.iceAssessment;
   const iceAssessment = {
-    impact: typeof ice?.impact === "number" ? clamp(ice.impact, 1, 10) : 5,
-    confidence: typeof ice?.confidence === "number" ? clamp(ice.confidence, 1, 10) : 5,
-    ease: typeof ice?.ease === "number" ? clamp(ice.ease, 1, 10) : 5,
+    impact: clamp(parseNum(ice?.impact, 5), 1, 10),
+    confidence: clamp(parseNum(ice?.confidence, 5), 1, 10),
+    ease: clamp(parseNum(ice?.ease, 5), 1, 10),
     reasoning: typeof ice?.reasoning === "string" ? ice.reasoning : "無核心理由。",
   };
 
@@ -333,7 +339,6 @@ export default function App() {
 
     const key = apiKeyInput.trim() || envApiKey;
     if (!key) {
-      // 在 iframe 中禁止使用 alert，改用 toast 以避免靜默報錯
       toast.error("缺少 API Key", { description: "請在儀表板右側輸入您的 Gemini API Key！" });
       return;
     }
@@ -344,37 +349,37 @@ export default function App() {
     setFeedback(null);
 
     try {
+      // 重新設計更嚴謹、且以變數佔位符取代實際字串的 Prompt，避免 AI 偷懶照抄格式
       const promptLines = [
-        "你是資深產品經理與敏捷教練。請根據以下決策命題，進行深度思考，並嚴格輸出可被 JSON.parse() 解析的純 JSON 物件。",
-        "請務必提供具體、切合情境的反饋，切勿使用空泛的預設詞彙。",
+        "你是資深產品經理與敏捷教練。請根據下方的【決策命題】以及使用者【目前已整理的優缺點】，進行深度思考，並嚴格輸出可被 JSON.parse() 解析的純 JSON 物件。",
+        "請務必提供具體、切合該命題情境的真實反饋，絕對不要照抄格式範例中的預設文字！",
         "",
-        "格式必須完全符合下述 JSON 結構：",
+        "=== JSON 輸出格式規範 ===",
+        "請完全遵守以下結構，但必須將裡面的文字與數值替換為「針對此命題實際評估後的真實內容與分數」：",
         "{",
-        '  "suggestedAdvantages": [{"text": "具體且深入的優勢點子1", "score": 4}, {"text": "具體的優勢點子2", "score": 3}, {"text": "具體的優勢點子3", "score": 3}, {"text": "具體的優勢點子4", "score": 2}],',
-        '  "suggestedDisadvantages": [{"text": "具體且深入的風險點子1", "score": 4}, {"text": "具體的風險點子2", "score": 3}, {"text": "具體的風險點子3", "score": 3}, {"text": "具體的風險點子4", "score": 2}],',
+        '  "suggestedAdvantages": [{"text": "(請根據命題生成具體的優點1)", "score": 4}, {"text": "(請根據命題生成具體的優點2)", "score": 3}, {"text": "(具體優點3)", "score": 3}],',
+        '  "suggestedDisadvantages": [{"text": "(請根據命題生成具體的風險1)", "score": 4}, {"text": "(請根據命題生成具體的風險2)", "score": 3}, {"text": "(具體風險3)", "score": 3}],',
         '  "iceAssessment": {',
-        '    "impact": 8,',
-        '    "confidence": 7,',
-        '    "ease": 6,',
-        '    "reasoning": "AI 給出的 20 字內 ICE 分數落點核心理由。"',
+        '    "impact": "(請根據命題評估影響力，填寫1-10的整數數字)",',
+        '    "confidence": "(請根據命題評估信心度，填寫1-10的整數數字)",',
+        '    "ease": "(請根據命題評估容易度，填寫1-10的整數數字)",',
+        '    "reasoning": "(解釋你給出這組 ICE 分數的核心理由，20字內)"',
         "  },",
-        '  "sandboxFeedback": "針對此命題給出的 80 字內 PM 決策沙盒盲點警示與反饋建議。"',
+        '  "sandboxFeedback": "(給出80字內針對此決策的 PM 盲點警示與具體行動建議)"',
         "}",
         "",
-        "要求：",
+        "=== 嚴格要求 ===",
         "1. 絕對只輸出 JSON 物件，不要任何 Markdown 標記或額外文字。",
-        "2. suggestedAdvantages (優點/機會) 與 suggestedDisadvantages (缺點/風險) 請根據命題「強制各生成 3 到 5 個不同且具體的項目」。",
-        "3. score 請統一用 1 到 5 的正整數代表強度。",
-        "4. iceAssessment 的分數請用 1 到 10。",
+        "2. suggestedAdvantages 與 suggestedDisadvantages 請強制「各生成 3 到 5 個不同且具體的項目」，必須替換掉範例文字。",
+        "3. ICE 的三個分數 (impact, confidence, ease) 請務必根據命題的實際困難度與回報進行「動態真實打分 (1-10)」，不要總是照抄範例。",
         "",
+        "=== 當前決策資訊 ===",
         "決策命題：" + activeTopic,
-        "",
         "目前使用者已整理的優點：" +
           (pros
             .filter((item) => item.text.trim())
             .map((item) => item.text + " (權重 " + item.weight + ")")
             .join("；") || "無"),
-        "",
         "目前使用者已整理的缺點：" +
           (cons
             .filter((item) => item.text.trim())
@@ -393,7 +398,7 @@ export default function App() {
           body: JSON.stringify({
             contents: [{ parts: [{ text: promptText }] }],
             generationConfig: {
-              temperature: 0.35,
+              temperature: 0.6, // 提高溫度以確保生成具體不同內容
               responseMimeType: "application/json",
             },
           }),
@@ -447,7 +452,7 @@ export default function App() {
       });
 
       toast.success("AI 決策分析已完成！", {
-        description: "已為您動態產生多組標籤與最新沙盒反饋。",
+        description: "已為您動態產生多組標籤與最新沙盒反饋與 ICE 分數。",
       });
     } catch (error) {
       console.error("Gemini analysis failed", error);
