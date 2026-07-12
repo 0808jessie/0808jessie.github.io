@@ -63,7 +63,6 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-<<<<<<< HEAD
 type PresetTag = { text: string; weight: number; keywords: RegExp };
 
 const PROS_TAGS: PresetTag[] = [
@@ -81,37 +80,6 @@ const CONS_TAGS: PresetTag[] = [
   { text: "通勤時間成本高", weight: 2, keywords: /實習|intern|工作|職|通勤/i },
   { text: "加班頻率較高", weight: 3, keywords: /工作|職|公司|加班/i },
 ];
-=======
-function getPresetIdeas(side: "pros" | "cons", topic: string): Item[] {
-  const t = topic.toLowerCase();
-
-  if (/(新創|公司|startup|company|corp)/i.test(topic)) {
-    return side === "pros"
-      ? [
-          { id: uid(), text: "發揮空間大，組織扁平", weight: 4 },
-          { id: uid(), text: "有機會拿到早期員工期權", weight: 3 },
-        ]
-      : [
-          { id: uid(), text: "制度較不完善，需要一人多工", weight: 4 },
-          { id: uid(), text: "公司營運與資金風險較高", weight: 3 },
-        ];
-  }
-
-  if (/(實習|intern|internship|實習生)/i.test(topic) || /實習|工作|職/.test(t)) {
-    return side === "pros"
-      ? [
-          { id: uid(), text: "提早累積軟體新創實戰經驗", weight: 4 },
-          { id: uid(), text: "建立產業人脈與導師連結", weight: 3 },
-        ]
-      : [
-          { id: uid(), text: "開學後面臨課業與工作雙重壓力", weight: 4 },
-          { id: uid(), text: "通勤與時間隱性成本高", weight: 2 },
-        ];
-  }
-
-  return [];
-}
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
 
 function analyze(topic: string): Analysis {
   const t = topic.toLowerCase();
@@ -154,15 +122,9 @@ function DecideNow() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const [ice, setIce] = useState<{ impact: number; confidence: number; ease: number }>({
-<<<<<<< HEAD
     impact: 5,
     confidence: 5,
     ease: 5,
-=======
-    impact: 3,
-    confidence: 3,
-    ease: 3,
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -244,24 +206,10 @@ function DecideNow() {
     else setCons((l) => l.filter((i) => i.id !== id));
   };
 
-<<<<<<< HEAD
   const addPresetTag = (side: "pros" | "cons", tag: PresetTag) => {
     const item: Item = { id: uid(), text: tag.text, weight: tag.weight };
     if (side === "pros") setPros((p) => [...p, item]);
     else setCons((c) => [...c, item]);
-=======
-  const applyPresetIdeas = (side: "pros" | "cons") => {
-    if (!topic) return;
-    const ideas = getPresetIdeas(side, topic);
-    if (ideas.length === 0) {
-      toast.info("目前沒有對應的 AI 預設利弊點子，請自行補充。");
-      return;
-    }
-
-    if (side === "pros") setPros(ideas);
-    else setCons(ideas);
-    toast.success("已為您帶入 AI 預設點子。");
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
   };
 
   const saveDecision = () => {
@@ -509,13 +457,9 @@ function DecideNow() {
                   onAdd={() => addItem("pros")}
                   onUpdate={(id, patch) => updateItem("pros", id, patch)}
                   onRemove={(id) => removeItem("pros", id)}
-<<<<<<< HEAD
                   tagPool={PROS_TAGS}
                   topic={topic}
                   onAddTag={(tag) => addPresetTag("pros", tag)}
-=======
-                  onUsePreset={() => applyPresetIdeas("pros")}
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
                 />
                 <Column
                   side="cons"
@@ -524,13 +468,9 @@ function DecideNow() {
                   onAdd={() => addItem("cons")}
                   onUpdate={(id, patch) => updateItem("cons", id, patch)}
                   onRemove={(id) => removeItem("cons", id)}
-<<<<<<< HEAD
                   tagPool={CONS_TAGS}
                   topic={topic}
                   onAddTag={(tag) => addPresetTag("cons", tag)}
-=======
-                  onUsePreset={() => applyPresetIdeas("cons")}
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
                 />
               </section>
 
@@ -910,13 +850,9 @@ function Column({
   onAdd,
   onUpdate,
   onRemove,
-<<<<<<< HEAD
   tagPool,
   topic,
   onAddTag,
-=======
-  onUsePreset,
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
 }: {
   side: "pros" | "cons";
   title: string;
@@ -924,7 +860,6 @@ function Column({
   onAdd: () => void;
   onUpdate: (id: string, patch: Partial<Item>) => void;
   onRemove: (id: string) => void;
-<<<<<<< HEAD
   tagPool: PresetTag[];
   topic: string;
   onAddTag: (tag: PresetTag) => void;
@@ -933,12 +868,6 @@ function Column({
   const accent = isPros ? "var(--success)" : "var(--destructive)";
   const prefix = isPros ? "✨" : "⚠️";
   const sign = isPros ? "+" : "-";
-=======
-  onUsePreset?: () => void;
-}) {
-  const isPros = side === "pros";
-  const accent = isPros ? "var(--success)" : "var(--destructive)";
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
 
   return (
     <div
@@ -964,21 +893,8 @@ function Column({
 
       <div className="flex flex-col gap-3">
         {items.length === 0 && (
-<<<<<<< HEAD
           <div className="rounded-xl border border-dashed border-border/70 bg-background/30 p-5 text-center text-sm text-muted-foreground">
             暫無資料，點擊下方按鈕新增，或從 AI 預設標籤池挑選 ↓
-=======
-          <div className="rounded-xl border border-dashed border-border/70 bg-background/30 p-6 text-center text-sm text-muted-foreground">
-            <div className="mb-3">暫無資料，點擊下方按鈕新增</div>
-            {onUsePreset && (
-              <button
-                onClick={onUsePreset}
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-[#F4F1EA] px-3 py-2 text-sm font-medium text-foreground transition-all hover:border-primary/30 hover:bg-[#efe8dc]"
-              >
-                <Sparkles className="h-3.5 w-3.5" />✨ 參考 AI 預設點子
-              </button>
-            )}
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
           </div>
         )}
         {items.map((item) => (
@@ -1001,7 +917,6 @@ function Column({
         <Plus className="h-4 w-4" />
         新增項目
       </button>
-<<<<<<< HEAD
 
       {/* Persistent AI preset tag pool */}
       <div className="mt-4 border-t border-dashed border-border/60 pt-3">
@@ -1053,8 +968,6 @@ function Column({
           })}
         </div>
       </div>
-=======
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
     </div>
   );
 }
@@ -1191,7 +1104,6 @@ function PMDecisionSandbox({
 }) {
   const score = ice.impact * ice.confidence * ice.ease;
   const verdict =
-<<<<<<< HEAD
     score >= 700
       ? {
           tone: "var(--success)",
@@ -1211,27 +1123,6 @@ function PMDecisionSandbox({
             emoji: "🛑",
             title: "Sell · 回報過低",
             body: "回報過低或執行難度過高，建議重新審視命題或尋找替代方案。",
-=======
-    score >= 60
-      ? {
-          tone: "var(--success)",
-          emoji: "🔥",
-          title: "高價值決策",
-          body: "值得立即推進的低成本高回報項目，建議快速啟動 MVP 驗證。",
-        }
-      : score <= 20
-        ? {
-            tone: "var(--destructive)",
-            emoji: "⚠️",
-            title: "高風險陷阱",
-            body: "投入成本過高或效益不明顯，建議重新評估或尋找替代方案。",
-          }
-        : {
-            tone: "var(--warning)",
-            emoji: "🧭",
-            title: "中等潛力",
-            body: "具備一定投報比，建議先設定量化里程碑再全速投入。",
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
           };
 
   const isJob = /實習|工作|職|intern|job/i.test(topic);
@@ -1304,11 +1195,7 @@ function PMDecisionSandbox({
             <span className="text-xs text-muted-foreground">ICE 綜合分數</span>
             <span className="text-2xl font-extrabold tabular-nums" style={{ color: verdict.tone }}>
               {score}
-<<<<<<< HEAD
               <span className="ml-1 text-xs font-medium text-muted-foreground">/ 1000</span>
-=======
-              <span className="ml-1 text-xs font-medium text-muted-foreground">/ 125</span>
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
             </span>
           </div>
 
@@ -1321,7 +1208,6 @@ function PMDecisionSandbox({
               <p className="mt-0.5 text-muted-foreground">{verdict.body}</p>
             </div>
           </div>
-<<<<<<< HEAD
 
           {/* ICE algorithm note card */}
           <div
@@ -1333,23 +1219,28 @@ function PMDecisionSandbox({
           >
             <div className="mb-1.5 font-semibold text-foreground/80">💡 ICE 決策矩陣備註</div>
             <div>
-              • 計算公式：<span className="font-semibold text-foreground/75">ICE 總分 = 影響力 (1-10) × 信心度 (1-10) × 容易度 (1-10)</span>。分數越高，代表該決策越值得優先執行。
+              • 計算公式：
+              <span className="font-semibold text-foreground/75">
+                ICE 總分 = 影響力 (1-10) × 信心度 (1-10) × 容易度 (1-10)
+              </span>
+              。分數越高，代表該決策越值得優先執行。
             </div>
             <div className="mt-1.5">• 分數級距參考：</div>
             <ul className="mt-0.5 space-y-0.5 pl-3">
               <li>
-                <span style={{ color: "var(--success)" }}>🌟 700 - 1000 分</span>：高價值、低阻力，建議立即採信並執行（Strong Buy）。
+                <span style={{ color: "var(--success)" }}>🌟 700 - 1000 分</span>
+                ：高價值、低阻力，建議立即採信並執行（Strong Buy）。
               </li>
               <li>
-                <span style={{ color: "var(--warning)" }}>⚖️ 400 - 699 分</span>：具備可行性，但需進一步評估潛在風險與替代方案（Hold）。
+                <span style={{ color: "var(--warning)" }}>⚖️ 400 - 699 分</span>
+                ：具備可行性，但需進一步評估潛在風險與替代方案（Hold）。
               </li>
               <li>
-                <span style={{ color: "var(--destructive)" }}>🛑 1 - 399 分</span>：回報過低或執行難度過高，建議重新審視命題（Sell）。
+                <span style={{ color: "var(--destructive)" }}>🛑 1 - 399 分</span>
+                ：回報過低或執行難度過高，建議重新審視命題（Sell）。
               </li>
             </ul>
           </div>
-=======
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
         </div>
 
         {/* Risk Mitigation & Plan B */}
@@ -1443,11 +1334,7 @@ function IceSlider({
       <input
         type="range"
         min={1}
-<<<<<<< HEAD
         max={10}
-=======
-        max={5}
->>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
         step={1}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
