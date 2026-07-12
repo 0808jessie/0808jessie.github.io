@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
-import { GoogleGenAI } from "@google/genai";
 import { toast } from "sonner";
 import {
   Archive,
@@ -77,38 +76,11 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-type PresetTag = {
+type AiTag = {
   text: string;
   weight: number;
-  keywords: RegExp;
-  highlightTone?: "amber" | "teal";
+  tone?: "amber" | "teal";
 };
-
-const PROS_TAGS: PresetTag[] = [
-  { text: "發揮空間大", weight: 4, keywords: /新創|startup|公司/i, highlightTone: "amber" },
-  { text: "組織扁平", weight: 3, keywords: /新創|startup|扁平/i, highlightTone: "amber" },
-  {
-    text: "提早累積實戰經驗",
-    weight: 4,
-    keywords: /實習|intern|工作|職|新創/i,
-    highlightTone: "teal",
-  },
-  { text: "建立產業人脈", weight: 3, keywords: /實習|intern|工作|職|公司/i, highlightTone: "teal" },
-  { text: "薪資具備彈性", weight: 3, keywords: /新創|公司|工作|職|薪/i },
-];
-
-const CONS_TAGS: PresetTag[] = [
-  { text: "制度較不完善", weight: 4, keywords: /新創|startup/i, highlightTone: "amber" },
-  { text: "資金風險較高", weight: 3, keywords: /新創|startup|公司/i, highlightTone: "amber" },
-  { text: "課業與工作雙重壓力", weight: 4, keywords: /實習|intern|學|課/i, highlightTone: "teal" },
-  {
-    text: "通勤時間成本高",
-    weight: 2,
-    keywords: /實習|intern|工作|職|通勤/i,
-    highlightTone: "teal",
-  },
-  { text: "加班頻率較高", weight: 3, keywords: /工作|職|公司|加班/i },
-];
 
 function analyze(topic: string): Analysis {
   const t = topic.toLowerCase();
@@ -199,6 +171,10 @@ export function DecideNow() {
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const [aiTagPool, setAiTagPool] = useState<{ pros: AiTag[]; cons: AiTag[] }>({
+    pros: [],
+    cons: [],
+  });
   const [ice, setIce] = useState<{ impact: number; confidence: number; ease: number }>({
     impact: 5,
     confidence: 5,
@@ -266,13 +242,19 @@ export function DecideNow() {
     const v = draft.trim();
     if (!v) return;
     setTopic(v);
+    setPros([]);
+    setCons([]);
+    setAiTagPool({ pros: [], cons: [] });
     setAnalysis(null);
+    setFeedback(null);
+    void runAnalysis(v);
   };
 
   const resetTopic = () => {
     setTopic(null);
     setPros([]);
     setCons([]);
+    setAiTagPool({ pros: [], cons: [] });
     setAnalysis(null);
     setFeedback(null);
     setDraft("");
@@ -295,7 +277,7 @@ export function DecideNow() {
     else setCons((l) => l.filter((i) => i.id !== id));
   };
 
-  const addPresetTag = (side: "pros" | "cons", tag: PresetTag) => {
+  const addPresetTag = (side: "pros" | "cons", tag: AiTag) => {
     const item: Item = {
       id: uid(),
       text: tag.text,
@@ -366,11 +348,14 @@ export function DecideNow() {
     toast.success("已還原歷史決策內容。", { description: entry.savedAt });
   };
 
-  const canAnalyze = !!topic && pros.some((i) => i.text.trim()) && cons.some((i) => i.text.trim());
+  const canAnalyze = !!topic;
 
-  const runAnalysis = async () => {
-    if (!canAnalyze || !topic) {
-      toast.error("請至少各輸入一項優缺點，才能進行盲點分析。");
+  const runAnalysis = async (topicOverride?: string) => {
+    const activeTopic = topicOverride?.trim() || topic?.trim();
+    if (!activeTopic) {
+      toast.error("請先輸入決策命題，再進行 AI 分析。", {
+        description: "命題輸入後會自動開始分析。",
+      });
       return;
     }
 
@@ -387,7 +372,6 @@ export function DecideNow() {
     setFeedback(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: key });
       const prompt = `你是決策教練。請針對以下決策命題與目前已整理的利弊，產出一份結構化 JSON。要求：
 1. 只輸出 JSON，不要任何額外文字。
 2. 內容必須是以下格式：
@@ -407,7 +391,7 @@ export function DecideNow() {
 4. suggestions 的每一項都要是具體、能直接加入決策矩陣的因子，且權重請用 1 到 5 的整數。
 5. ice 的分數要用 1 到 10 的整數，反映這個決策在實際執行時的可行性。
 
-決策命題：${topic}
+決策命題：${activeTopic}
 
 目前優點：${
         pros
@@ -423,17 +407,37 @@ export function DecideNow() {
           .join("；") || "無"
       }`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-        config: {
-          temperature: 0.35,
-          responseMimeType: "application/json",
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.35,
+              responseMimeType: "application/json",
+            },
+          }),
         },
-      });
+      );
 
-      const payload = parseGeminiPayload(response.text);
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Gemini API 回傳錯誤 ${response.status}: ${errorBody}`);
+      }
+
+      const data = (await response.json()) as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const payload = parseGeminiPayload(responseText);
+
       setAnalysis(payload.analysis);
+      setAiTagPool({
+        pros: payload.suggestions.pros.map((item) => ({ text: item.text, weight: item.weight })),
+        cons: payload.suggestions.cons.map((item) => ({ text: item.text, weight: item.weight })),
+      });
 
       setPros((prev) => {
         const seen = new Set(prev.map((item) => item.text.trim().toLowerCase()));
@@ -471,12 +475,16 @@ export function DecideNow() {
         ease: payload.ice.ease,
       });
 
-      toast.success("Gemini 分析已完成，建議已同步進入矩陣與 ICE 評估。", {
-        description: "你可以直接檢視新增的 AI 建議因子與調整後的分數。",
+      toast.success("Gemini 已生成動態優缺點標籤與 ICE 建議。", {
+        description: "你可以直接點擊 AI 標籤加入矩陣，或調整 ICE 滑桿。",
       });
     } catch (error) {
       console.error("Gemini analysis failed", error);
-      setAnalysis(analyze(topic));
+      setAnalysis(analyze(activeTopic));
+      setAiTagPool({
+        pros: [{ text: "進一步拆解關鍵假設", weight: 3 }],
+        cons: [{ text: "確認執行阻力與資源限制", weight: 3 }],
+      });
       toast.error("Gemini 分析失敗，已切回本地備援分析。", {
         description:
           error instanceof Error ? error.message : "請確認 API Key 正確且可被本機頁面呼叫。",
@@ -654,7 +662,7 @@ export function DecideNow() {
                   onAdd={() => addItem("pros")}
                   onUpdate={(id, patch) => updateItem("pros", id, patch)}
                   onRemove={(id) => removeItem("pros", id)}
-                  tagPool={PROS_TAGS}
+                  tagPool={aiTagPool.pros}
                   topic={activeQuestion}
                   onAddTag={(tag) => addPresetTag("pros", tag)}
                 />
@@ -665,7 +673,7 @@ export function DecideNow() {
                   onAdd={() => addItem("cons")}
                   onUpdate={(id, patch) => updateItem("cons", id, patch)}
                   onRemove={(id) => removeItem("cons", id)}
-                  tagPool={CONS_TAGS}
+                  tagPool={aiTagPool.cons}
                   topic={activeQuestion}
                   onAddTag={(tag) => addPresetTag("cons", tag)}
                 />
@@ -1066,9 +1074,9 @@ function Column({
   onAdd: () => void;
   onUpdate: (id: string, patch: Partial<Item>) => void;
   onRemove: (id: string) => void;
-  tagPool: PresetTag[];
+  tagPool: AiTag[];
   topic: string;
-  onAddTag: (tag: PresetTag) => void;
+  onAddTag: (tag: AiTag) => void;
 }) {
   const isPros = side === "pros";
   const accent = isPros ? "var(--success)" : "var(--destructive)";
@@ -1128,38 +1136,43 @@ function Column({
       <div className="mt-4 border-t border-dashed border-border/60 pt-3">
         <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           <Sparkles className="h-3 w-3" style={{ color: accent }} />
-          AI 預設標籤池 · 點擊即可疊加
+          AI 動態標籤池 · 點擊即可疊加
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {tagPool.map((tag) => {
-            const highlighted = tag.keywords.test(topic);
-            const toneClass =
-              highlighted && tag.highlightTone === "amber"
-                ? "border-amber-500 bg-amber-50 text-amber-700 shadow-[0_0_0_1px_rgba(245,158,11,0.16)] animate-pulse"
-                : highlighted && tag.highlightTone === "teal"
-                  ? "border-teal-500 bg-teal-50 text-teal-700 shadow-[0_0_0_1px_rgba(20,184,166,0.16)] animate-pulse"
-                  : "border-border bg-[#F4F1EA] text-muted-foreground";
-            return (
-              <button
-                key={tag.text}
-                onClick={() => onAddTag(tag)}
-                className={`group inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all hover:-translate-y-0.5 active:scale-95 ${toneClass}`}
-                title={`${prefix} ${tag.text}（${sign}${tag.weight} 分）`}
-              >
-                <span>
-                  {prefix} {tag.text}
-                </span>
-                <span
-                  className={`rounded-sm px-1 text-[10px] font-bold tabular-nums ${highlighted ? "bg-white/80" : "bg-white/60"}`}
-                  style={{ color: accent }}
+        {tagPool.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/60 bg-background/40 px-3 py-2 text-[11px] text-muted-foreground">
+            輸入命題後，AI 會根據情境自動產生適合的優缺點標籤。
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {tagPool.map((tag) => {
+              const toneClass =
+                tag.tone === "amber"
+                  ? "border-amber-500 bg-amber-50 text-amber-700 shadow-[0_0_0_1px_rgba(245,158,11,0.16)]"
+                  : tag.tone === "teal"
+                    ? "border-teal-500 bg-teal-50 text-teal-700 shadow-[0_0_0_1px_rgba(20,184,166,0.16)]"
+                    : "border-border bg-[#F4F1EA] text-muted-foreground";
+              return (
+                <button
+                  key={tag.text}
+                  onClick={() => onAddTag(tag)}
+                  className={`group inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all hover:-translate-y-0.5 active:scale-95 ${toneClass}`}
+                  title={`${prefix} ${tag.text}（${sign}${tag.weight} 分）`}
                 >
-                  {sign}
-                  {tag.weight}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  <span>
+                    {prefix} {tag.text}
+                  </span>
+                  <span
+                    className="rounded-sm bg-white/70 px-1 text-[10px] font-bold tabular-nums"
+                    style={{ color: accent }}
+                  >
+                    {sign}
+                    {tag.weight}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
