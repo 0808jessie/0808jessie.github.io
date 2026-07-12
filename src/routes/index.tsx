@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
@@ -29,10 +28,6 @@ import {
   X,
   Zap,
 } from "lucide-react";
-
-export const Route = createFileRoute("/")({
-  component: DecideNow,
-});
 
 type Item = {
   id: string;
@@ -113,7 +108,7 @@ function analyze(topic: string): Analysis {
   };
 }
 
-function DecideNow() {
+export function DecideNow() {
   const [draft, setDraft] = useState("");
   const [topic, setTopic] = useState<string | null>(null);
   const [pros, setPros] = useState<Item[]>([]);

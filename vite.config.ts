@@ -10,6 +10,7 @@ export default defineConfig({
     tsconfigPaths(), // 支援專案中的 @/ 路徑別名
   ],
   build: {
-    outDir: "dist", // 確保手動編譯後會產生 dist 資料夾
+    outDir: "docs", // GitHub Pages 直接使用 docs 目錄
+    emptyOutDir: true,
   },
 });
