@@ -8,13 +8,18 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+<<<<<<< HEAD
 dist
+=======
+#dist
+>>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
 dist-ssr
 .output
 .vinxi
 .tanstack/**
 .nitro
 *.local
+<<<<<<< HEAD
 .DS_Store
 .android/
 .cache/
@@ -22,6 +27,8 @@ dist/
 .config/
 *.xml
 node_modules/
+=======
+>>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
 
 # Wrangler / Cloudflare
 .wrangler/
@@ -37,4 +44,7 @@ node_modules/
 *.njsproj
 *.sln
 *.sw?
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1a25c78b1ebdd51ad37b244bf20df6609d9e0fa1
